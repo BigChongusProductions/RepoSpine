@@ -1,0 +1,21 @@
+# .semgrepignore — primary exclusion mechanism for SAST scans
+# Rule-level paths.exclude is unreliable with single-file scans (see Appendix B in SAST plan).
+# Use this file for all directory/pattern exclusions.
+
+# Vendored / generated
+node_modules/
+vendor/
+__pycache__/
+*.generated.*
+*.min.js
+dist/
+build/
+.git/
+
+# Test fixtures (synthetic bad code for SAST testing)
+tests/fixtures/sast/
+
+# Template scripts that legitimately use sqlite3 (not via dbq wrapper)
+# fp_engine.py reads DB for placeholder derivation; generate_board reads for display
+templates/scripts/fp_engine.py
+templates/scripts/generate_board.template.py

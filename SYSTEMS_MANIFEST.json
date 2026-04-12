@@ -1,0 +1,802 @@
+{
+  "$schema": "SYSTEMS_MANIFEST",
+  "version": "1.0.0",
+  "generated": "2026-04-09",
+  "description": "Machine-readable inventory of all project-bootstrap components — describes what a generated project receives",
+
+  "frameworks": [
+    {
+      "name": "coherence-system.md",
+      "path": "templates/frameworks/coherence-system.md",
+      "description": "Registry-based stale reference detection for markdown files using pure shell."
+    },
+    {
+      "name": "correction-protocol.md",
+      "path": "templates/frameworks/correction-protocol.md",
+      "description": "Mandatory hook-enforced gate that forces lesson logging before diagnosing or fixing any correction."
+    },
+    {
+      "name": "delegation.md",
+      "path": "templates/frameworks/delegation.md",
+      "description": "Six-tier model for assigning tasks to the right model tier with escalation and failure protocols."
+    },
+    {
+      "name": "development-discipline.md",
+      "path": "templates/frameworks/development-discipline.md",
+      "description": "TDD iron law and debugging discipline rules adapted from Superpowers plugin."
+    },
+    {
+      "name": "falsification.md",
+      "path": "templates/frameworks/falsification.md",
+      "description": "Scientific method for code: prove correctness by failing to disprove, not by hoping things work."
+    },
+    {
+      "name": "loopback-system.md",
+      "path": "templates/frameworks/loopback-system.md",
+      "description": "Parallel backward-fix track for handling defects discovered in earlier phases without blocking forward progress."
+    },
+    {
+      "name": "phase-gates.md",
+      "path": "templates/frameworks/phase-gates.md",
+      "description": "GO/CONFIRM/STOP verdict system for phase transitions and pre-task checks."
+    },
+    {
+      "name": "quality-gates.md",
+      "path": "templates/frameworks/quality-gates.md",
+      "description": "Automated code quality gates including lint, type check, SAST, and secrets scanning."
+    },
+    {
+      "name": "session-protocol.md",
+      "path": "templates/frameworks/session-protocol.md",
+      "description": "Mandatory session start orientation, model self-report gate, and lesson extraction protocol."
+    },
+    {
+      "name": "visual-verification.md",
+      "path": "templates/frameworks/visual-verification.md",
+      "description": "Playwright-based visual verification pipeline for tasks tagged needs_browser=1."
+    }
+  ],
+
+  "hooks": [
+    {
+      "name": ".semgrepignore.template",
+      "path": "templates/hooks/.semgrepignore.template",
+      "event": "config",
+      "description": "Semgrep ignore patterns deployed to bootstrapped projects to suppress false positives."
+    },
+    {
+      "name": "agent-spawn-gate.template.sh",
+      "path": "templates/hooks/agent-spawn-gate.template.sh",
+      "event": "PreToolUse",
+      "description": "Hard enforcement gate for Agent tool calls — blocks sub-agent spawns when delegation approval or pre-task check is stale."
+    },
+    {
+      "name": "check-pbxproj.template.sh",
+      "path": "templates/hooks/check-pbxproj.template.sh",
+      "event": "PostToolUse",
+      "description": "After Write tool calls on .swift files, warns if the file is missing from the Xcode project.pbxproj."
+    },
+    {
+      "name": "correction-detector.template.sh",
+      "path": "templates/hooks/correction-detector.template.sh",
+      "event": "UserPromptSubmit",
+      "description": "Scans every user message for correction signals and injects a hard gate reminder before Claude responds."
+    },
+    {
+      "name": "end-of-turn-check.template.sh",
+      "path": "templates/hooks/end-of-turn-check.template.sh",
+      "event": "Stop",
+      "description": "Fires after Claude finishes responding to check for session hygiene issues and inject warnings."
+    },
+    {
+      "name": "escalation-tracker.template.sh",
+      "path": "templates/hooks/escalation-tracker.template.sh",
+      "event": "SubagentStop",
+      "description": "After sub-agent completion, detects failures and increments per-tier failure counters for escalation tracking."
+    },
+    {
+      "name": "framework-contamination-check.template.sh",
+      "path": "templates/hooks/framework-contamination-check.template.sh",
+      "event": "PostToolUse",
+      "description": "After Edit or Write calls on framework files, scans for project-specific strings that violate framework genericity."
+    },
+    {
+      "name": "framework-contamination-patterns.template.conf",
+      "path": "templates/hooks/framework-contamination-patterns.template.conf",
+      "event": "config",
+      "description": "Configuration file listing project-specific patterns that must not appear in generic framework files."
+    },
+    {
+      "name": "generate-protected-files.template.sh",
+      "path": "templates/hooks/generate-protected-files.template.sh",
+      "event": "utility",
+      "description": "Auto-generates protected-files.conf from project STOP rules, infrastructure scripts, and framework files."
+    },
+    {
+      "name": "mark_delegation_approved.template.sh",
+      "path": "templates/hooks/mark_delegation_approved.template.sh",
+      "event": "utility",
+      "description": "Resets the delegation edit counter and records a fresh approval timestamp after Master approves a delegation table."
+    },
+    {
+      "name": "permission-denied-tracker.template.sh",
+      "path": "templates/hooks/permission-denied-tracker.template.sh",
+      "event": "PermissionDenied",
+      "description": "When a sub-agent Bash call is denied, increments the failure counter for the active sub-agent tier."
+    },
+    {
+      "name": "post-compact-recovery.template.sh",
+      "path": "templates/hooks/post-compact-recovery.template.sh",
+      "event": "PostCompact",
+      "description": "After context compaction, re-injects critical behavioral rules that may have been summarized away."
+    },
+    {
+      "name": "pre-edit-check.template.sh",
+      "path": "templates/hooks/pre-edit-check.template.sh",
+      "event": "PreToolUse",
+      "description": "Consolidated gate for Edit/Write calls combining delegation reminder and architecture file protection."
+    },
+    {
+      "name": "protect-databases.template.sh",
+      "path": "templates/hooks/protect-databases.template.sh",
+      "event": "PreToolUse",
+      "description": "Fires before Bash commands to deny sqlite3 write operations targeting external project databases."
+    },
+    {
+      "name": "protected-files.template.conf",
+      "path": "templates/hooks/protected-files.template.conf",
+      "event": "config",
+      "description": "Configuration file listing filename patterns for architecture files that require human confirmation to edit."
+    },
+    {
+      "name": "session-end-safety.template.sh",
+      "path": "templates/hooks/session-end-safety.template.sh",
+      "event": "SessionEnd",
+      "description": "At session termination, auto-saves session state to NEXT_SESSION.md if no manual save was done recently."
+    },
+    {
+      "name": "session-start-check.template.sh",
+      "path": "templates/hooks/session-start-check.template.sh",
+      "event": "SessionStart",
+      "description": "At session start, runs the full briefing and injects DB state, NEXT_SESSION.md, and health checks as additionalContext."
+    },
+    {
+      "name": "static-analysis-gate.template.sh",
+      "path": "templates/hooks/static-analysis-gate.template.sh",
+      "event": "PostToolUse",
+      "description": "After Edit and Write calls, runs Semgrep on the modified file and reports findings as non-blocking advisories."
+    },
+    {
+      "name": "subagent-delegation-check.template.sh",
+      "path": "templates/hooks/subagent-delegation-check.template.sh",
+      "event": "SubagentStart",
+      "description": "When a sub-agent is spawned, verifies that delegation was recently approved and injects an advisory warning."
+    }
+  ],
+
+  "scripts": [
+    {
+      "name": "bootstrap_project.sh",
+      "path": "bootstrap_project.sh",
+      "type": "root",
+      "public": true,
+      "description": "Main bootstrapper — creates a new project with the full workflow engine from templates."
+    },
+    {
+      "name": "build_plugin.sh",
+      "path": "build_plugin.sh",
+      "type": "root",
+      "public": false,
+      "description": "Builds and optionally installs the Cowork Claude plugin from plugin.json and associated assets. Meta-project only."
+    },
+    {
+      "name": "build_summarizer.sh",
+      "path": "build_summarizer.sh",
+      "type": "root",
+      "public": false,
+      "description": "Bootstrap meta-project build summarizer wrapping build, test, and clean steps. Meta-project only; generated projects get build_summarizer.template.sh."
+    },
+    {
+      "name": "check_all_projects.sh",
+      "path": "check_all_projects.sh",
+      "type": "root",
+      "public": false,
+      "description": "Runs deployment verification and eval scoring across all active projects listed in PROJECTS.local.md. Meta-project only."
+    },
+    {
+      "name": "db_queries.sh",
+      "path": "db_queries.sh",
+      "type": "root",
+      "public": false,
+      "description": "Thin wrapper delegating all db_queries commands to the Python dbq CLI. Meta-project instance; generated projects get db_queries.template.sh deployed as db_queries.sh."
+    },
+    {
+      "name": "mark_delegation_approved.sh",
+      "path": "mark_delegation_approved.sh",
+      "type": "root",
+      "public": false,
+      "description": "Meta-project root wrapper delegating to .claude/hooks/mark_delegation_approved.sh. Meta-project only."
+    },
+    {
+      "name": "save_session.sh",
+      "path": "save_session.sh",
+      "type": "root",
+      "public": false,
+      "description": "Snapshots DB state and updates NEXT_SESSION.md for session handoff. Meta-project instance; generated projects get save_session.template.sh deployed as save_session.sh."
+    },
+    {
+      "name": "session_briefing.sh",
+      "path": "session_briefing.sh",
+      "type": "root",
+      "public": false,
+      "description": "Compact status digest at session start. Meta-project instance; generated projects get session_briefing.template.sh deployed as session_briefing.sh."
+    },
+    {
+      "name": "work.sh",
+      "path": "work.sh",
+      "type": "root",
+      "public": false,
+      "description": "Work session launcher that sets environment variables and opens the Claude Code session. Meta-project instance; generated projects get work.template.sh deployed as work.sh."
+    },
+    {
+      "name": "build_summarizer.template.sh",
+      "path": "templates/scripts/build_summarizer.template.sh",
+      "type": "template",
+      "description": "Template for project build summarizer — wraps build, test, and SAST steps into a compact digest."
+    },
+    {
+      "name": "build_summarizer_xcode.template.sh",
+      "path": "templates/scripts/build_summarizer_xcode.template.sh",
+      "type": "template",
+      "description": "Template for Xcode build summarizer — wraps xcodebuild and returns a compact digest for Claude."
+    },
+    {
+      "name": "coherence_check.template.sh",
+      "path": "templates/scripts/coherence_check.template.sh",
+      "type": "template",
+      "description": "Template for scanning markdown files for deprecated patterns defined in the coherence registry."
+    },
+    {
+      "name": "coherence_registry.template.sh",
+      "path": "templates/scripts/coherence_registry.template.sh",
+      "type": "template",
+      "description": "Template defining deprecated pattern arrays sourced by coherence_check.sh for stale reference detection."
+    },
+    {
+      "name": "db_queries.template.sh",
+      "path": "templates/scripts/db_queries.template.sh",
+      "type": "template",
+      "description": "Template for thin Python CLI dispatcher with bash fallback for all db_queries commands."
+    },
+    {
+      "name": "fix.template.sh",
+      "path": "templates/scripts/fix.template.sh",
+      "type": "template",
+      "description": "Template for fix mode session launcher using osascript on macOS."
+    },
+    {
+      "name": "generate_board.template.py",
+      "path": "templates/scripts/generate_board.template.py",
+      "type": "template",
+      "description": "Template for markdown task board generator grouped by phase from the project SQLite database."
+    },
+    {
+      "name": "harvest.template.sh",
+      "path": "templates/scripts/harvest.template.sh",
+      "type": "template",
+      "description": "Template for scanning project lessons for patterns eligible for promotion to LESSONS_UNIVERSAL.md."
+    },
+    {
+      "name": "milestone_check.template.sh",
+      "path": "templates/scripts/milestone_check.template.sh",
+      "type": "template",
+      "description": "Template for merge-readiness gate checking dev-to-main promotion criteria."
+    },
+    {
+      "name": "pre-commit.template.sh",
+      "path": "templates/scripts/pre-commit.template.sh",
+      "type": "template",
+      "description": "Template for pre-commit hook running Gate 1 quality checks: lint, type check, SAST, and secrets."
+    },
+    {
+      "name": "save_session.template.sh",
+      "path": "templates/scripts/save_session.template.sh",
+      "type": "template",
+      "description": "Template for generating NEXT_SESSION.md from current DB and git state at session end."
+    },
+    {
+      "name": "session_briefing.template.sh",
+      "path": "templates/scripts/session_briefing.template.sh",
+      "type": "template",
+      "description": "Template for compact session start status digest with signal, phase, and task queue."
+    },
+    {
+      "name": "shared_signal.template.sh",
+      "path": "templates/scripts/shared_signal.template.sh",
+      "type": "template",
+      "description": "Template for computing session signal (GREEN/YELLOW/RED) from DB state — sourced by session_briefing.sh."
+    },
+    {
+      "name": "test_protocol.template.sh",
+      "path": "templates/scripts/test_protocol.template.sh",
+      "type": "template",
+      "description": "Template for validating session_briefing.sh and db_queries.sh signal output against known database states."
+    },
+    {
+      "name": "work.template.sh",
+      "path": "templates/scripts/work.template.sh",
+      "type": "template",
+      "description": "Template for work session launcher setting project environment variables."
+    },
+    {
+      "name": "fill_placeholders.py",
+      "path": "templates/scripts/fill_placeholders.py",
+      "type": "python",
+      "description": "CLI entry point for placeholder token replacement — orchestrates fp_engine, fp_registry, and fp_replacer."
+    },
+    {
+      "name": "fp_engine.py",
+      "path": "templates/scripts/fp_engine.py",
+      "type": "python",
+      "description": "Derivation engine for fill_placeholders — contains SpecReader, TechDetector, and build_values() with 41 token derivations."
+    },
+    {
+      "name": "fp_registry.py",
+      "path": "templates/scripts/fp_registry.py",
+      "type": "python",
+      "description": "Token registry defining the 41 placeholder token definitions used by fill_placeholders."
+    },
+    {
+      "name": "fp_replacer.py",
+      "path": "templates/scripts/fp_replacer.py",
+      "type": "python",
+      "description": "Placeholder substitution engine applying regex replacements to files and generating the JSON report."
+    },
+    {
+      "name": "verify_deployment.py",
+      "path": "templates/scripts/verify_deployment.py",
+      "type": "python",
+      "description": "Runs 18 deployment verification checks (C01-C18) for bootstrapped projects and reports pass/fail."
+    }
+  ],
+
+  "agents": [
+    {
+      "name": "explorer.template.md",
+      "path": "templates/agents/explorer.template.md",
+      "tier": "haiku",
+      "description": "Read-only research agent for P1-DISCOVER tasks, codebase exploration, and pre-implementation context gathering."
+    },
+    {
+      "name": "implementer.template.md",
+      "path": "templates/agents/implementer.template.md",
+      "tier": "sonnet",
+      "description": "Multi-file feature implementation agent for Sonnet-tier tasks — new views, models, managers, and multi-file features."
+    },
+    {
+      "name": "verifier.template.md",
+      "path": "templates/agents/verifier.template.md",
+      "tier": "haiku",
+      "description": "Post-implementation review agent that reads changes, runs tests, and reports PASS/FAIL with evidence."
+    },
+    {
+      "name": "worker.template.md",
+      "path": "templates/agents/worker.template.md",
+      "tier": "haiku",
+      "description": "Single-file config and boilerplate agent for Haiku-tier work — keyboard shortcuts, simple models, plist entries."
+    }
+  ],
+
+  "checks": [
+    {
+      "id": "C01",
+      "function": "check_c01_db_health",
+      "description": "Runs db_queries.sh health and verifies it exits 0."
+    },
+    {
+      "id": "C02",
+      "function": "check_c02_task_queue",
+      "description": "Runs db_queries.sh next and verifies the task queue is accessible."
+    },
+    {
+      "id": "C03",
+      "function": "check_c03_session_briefing",
+      "description": "Runs session_briefing.sh and verifies it exits 0."
+    },
+    {
+      "id": "C04",
+      "function": "check_c04_coherence_check",
+      "description": "Runs coherence_check.sh and verifies no stale references are detected."
+    },
+    {
+      "id": "C05",
+      "function": "check_c05_import_chain",
+      "description": "Verifies all @-import references in CLAUDE.md resolve to existing files."
+    },
+    {
+      "id": "C06",
+      "function": "check_c06_no_stray_placeholders",
+      "description": "Scans project files for unfilled %%PLACEHOLDER%% tokens that were not replaced after bootstrapping."
+    },
+    {
+      "id": "C07",
+      "function": "check_c07_hook_settings_wired",
+      "description": "Verifies every hook command referenced in settings.json resolves to an existing, executable script."
+    },
+    {
+      "id": "C08",
+      "function": "check_c08_framework_files",
+      "description": "Verifies all 10 framework files are present in the project-local frameworks directory (templates/frameworks/ source, deployed to .claude/frameworks/)."
+    },
+    {
+      "id": "C09",
+      "function": "check_c09_tracking_files",
+      "description": "Verifies required tracking files (LESSONS, LEARNING_LOG, PROJECT_MEMORY, AGENT_DELEGATION) are present."
+    },
+    {
+      "id": "C10",
+      "function": "check_c10_refs_directory",
+      "description": "Verifies the refs/ directory exists and is scaffolded."
+    },
+    {
+      "id": "C11",
+      "function": "check_c11_build_command",
+      "description": "Runs build_summarizer.sh build and verifies the build command succeeds."
+    },
+    {
+      "id": "C12",
+      "function": "check_c12_global_lessons",
+      "description": "Verifies LESSONS_UNIVERSAL.md exists for cross-project lesson storage (located at ~/.claude/LESSONS_UNIVERSAL.md by convention; created as a stub if absent)."
+    },
+    {
+      "id": "C13",
+      "function": "check_c13_enforcement_hooks",
+      "description": "Verifies the minimum number of executable hook scripts are deployed in .claude/hooks/."
+    },
+    {
+      "id": "C14",
+      "function": "check_c14_settings_json",
+      "description": "Verifies .claude/settings.json is valid JSON with the minimum number of hook events wired."
+    },
+    {
+      "id": "C15",
+      "function": "check_c15_custom_agents",
+      "description": "Verifies implementer and worker custom agent directories exist with at least one .md file each."
+    },
+    {
+      "id": "C16",
+      "function": "check_c16_path_rules",
+      "description": "Verifies the .claude/rules/ directory is scaffolded for path-specific rule injection."
+    },
+    {
+      "id": "C17",
+      "function": "check_c17_no_hardcoded_refs",
+      "description": "Scans templates for hardcoded project-specific references that should not appear in generic templates."
+    },
+    {
+      "id": "C18",
+      "function": "check_c18_drift_score",
+      "description": "Runs db_queries.sh drift --quiet and verifies the drift detection score is above threshold (>= 80)."
+    }
+  ],
+
+  "rules": [
+    {
+      "name": "AGENT_DELEGATION_TEMPLATE.md",
+      "path": "templates/rules/AGENT_DELEGATION_TEMPLATE.md",
+      "scope": "project",
+      "description": "Template for the agent delegation logic file — tier model, task mapping, and failure escalation protocol."
+    },
+    {
+      "name": "CLAUDE_TEMPLATE.md",
+      "path": "templates/rules/CLAUDE_TEMPLATE.md",
+      "scope": "project",
+      "description": "Template for the project CLAUDE.md entry point with framework imports and quick reference."
+    },
+    {
+      "name": "ROUTER_TEMPLATE.md",
+      "path": "templates/rules/ROUTER_TEMPLATE.md",
+      "scope": "project",
+      "description": "Template for the context router table mapping on-demand frameworks and project context files."
+    },
+    {
+      "name": "RULES_EXTENDED_TEMPLATE.md",
+      "path": "templates/rules/RULES_EXTENDED_TEMPLATE.md",
+      "scope": "project",
+      "description": "Template for the extended rules reference covering blocker detection, merge gate, and code standards."
+    },
+    {
+      "name": "RULES_TEMPLATE.md",
+      "path": "templates/rules/RULES_TEMPLATE.md",
+      "scope": "project",
+      "description": "Template for project-specific rules including phase gates, task workflow, and tech stack configuration."
+    },
+    {
+      "name": "database-safety.template.md",
+      "path": "templates/rules/database-safety.template.md",
+      "scope": "language",
+      "description": "Path-scoped rules for database access — read-only project DBs, GRDB only, no raw sqlite3 calls."
+    },
+    {
+      "name": "go-standards.template.md",
+      "path": "templates/rules/go-standards.template.md",
+      "scope": "language",
+      "description": "Path-scoped Go coding standards applied to all .go files in the project."
+    },
+    {
+      "name": "node-standards.template.md",
+      "path": "templates/rules/node-standards.template.md",
+      "scope": "language",
+      "description": "Path-scoped Node.js and TypeScript coding standards applied to .ts and .tsx files."
+    },
+    {
+      "name": "python-standards.template.md",
+      "path": "templates/rules/python-standards.template.md",
+      "scope": "language",
+      "description": "Path-scoped Python coding standards applied to all .py files in the project."
+    },
+    {
+      "name": "rust-standards.template.md",
+      "path": "templates/rules/rust-standards.template.md",
+      "scope": "language",
+      "description": "Path-scoped Rust coding standards applied to all .rs files in the project."
+    },
+    {
+      "name": "swift-standards.template.md",
+      "path": "templates/rules/swift-standards.template.md",
+      "scope": "language",
+      "description": "Path-scoped Swift coding standards applied to all .swift files in the project."
+    },
+    {
+      "name": "workflow-scripts.template.md",
+      "path": "templates/rules/workflow-scripts.template.md",
+      "scope": "workflow",
+      "description": "Path-scoped rules for shell scripts and framework docs covering error handling and cascading changes."
+    }
+  ],
+
+  "semgrep_rules": [
+    {
+      "path": "templates/semgrep-rules/bootstrap.yaml",
+      "rule_count": 2
+    }
+  ],
+
+  "settings": [
+    {
+      "name": "settings.local.template.json",
+      "path": "templates/settings/settings.local.template.json",
+      "description": "Template for local-only Claude Code permissions overrides not committed to the repository."
+    },
+    {
+      "name": "settings.template.json",
+      "path": "templates/settings/settings.template.json",
+      "description": "Template for the main Claude Code settings.json wiring all hooks to their event types with permissions."
+    }
+  ],
+
+  "dbq_commands": [
+    {
+      "name": "delegation.py",
+      "path": "templates/scripts/dbq/commands/delegation.py",
+      "description": "Delegation, delegation-md, and sync-check commands for task tier mapping and AGENT_DELEGATION.md regeneration."
+    },
+    {
+      "name": "drift.py",
+      "path": "templates/scripts/dbq/commands/drift.py",
+      "description": "Drift detection with unified coherence checking and 0-100 scored report across C1-C10 checkers."
+    },
+    {
+      "name": "eval.py",
+      "path": "templates/scripts/dbq/commands/eval.py",
+      "description": "Three-layer evaluation scoring: deployment quality (D1-D8), process health (P1-P7), and improvement velocity (V1-V4)."
+    },
+    {
+      "name": "falsification.py",
+      "path": "templates/scripts/dbq/commands/falsification.py",
+      "description": "Assumption tracking and verification commands: assume, verify-assumption, verify-all, and assumptions."
+    },
+    {
+      "name": "handover.py",
+      "path": "templates/scripts/dbq/commands/handover.py",
+      "description": "Session continuity commands: resume (single-command startup) and handover (annotate task with session notes)."
+    },
+    {
+      "name": "health.py",
+      "path": "templates/scripts/dbq/commands/health.py",
+      "description": "Health and recovery commands: init-db, health, backup, restore, and verify."
+    },
+    {
+      "name": "knowledge.py",
+      "path": "templates/scripts/dbq/commands/knowledge.py",
+      "description": "Knowledge commands: lessons, log-lesson, promote, escalate, and harvest for lesson pipeline management."
+    },
+    {
+      "name": "lint.py",
+      "path": "templates/scripts/dbq/commands/lint.py",
+      "description": "Structural lint checks for project configuration files."
+    },
+    {
+      "name": "loopbacks.py",
+      "path": "templates/scripts/dbq/commands/loopbacks.py",
+      "description": "Loopback management commands: loopbacks, loopback-stats, loopback-lesson, and ack-breaker."
+    },
+    {
+      "name": "next_cmd.py",
+      "path": "templates/scripts/dbq/commands/next_cmd.py",
+      "description": "Next command outputting task queue with circuit breaker, loopbacks, forward-ready, blocked tasks, and stale blockers."
+    },
+    {
+      "name": "phases.py",
+      "path": "templates/scripts/dbq/commands/phases.py",
+      "description": "Phase and gate commands: phase, gate, gate-pass, status, blockers, confirm, confirmations, and master."
+    },
+    {
+      "name": "sessions.py",
+      "path": "templates/scripts/dbq/commands/sessions.py",
+      "description": "Session and decision commands: sessions, log, decisions, tag-session, session-tags, and session-file."
+    },
+    {
+      "name": "snapshots.py",
+      "path": "templates/scripts/dbq/commands/snapshots.py",
+      "description": "Snapshot commands: snapshot, snapshot-list, snapshot-show, and snapshot-diff within the db_snapshots table."
+    },
+    {
+      "name": "tasks.py",
+      "path": "templates/scripts/dbq/commands/tasks.py",
+      "description": "Task commands: done, quick, check, and supporting utilities for task lifecycle management."
+    },
+    {
+      "name": "doctor.py",
+      "path": "templates/scripts/dbq/commands/doctor.py",
+      "description": "Environment health check: prerequisites, templates, frameworks, platform notes, and host capabilities."
+    }
+  ],
+
+  "plugin": {
+    "path": ".claude-plugin/plugin.json",
+    "description": "Cowork integration plugin"
+  },
+
+  "component_groups": {
+    "frameworks_all": [
+      "templates/frameworks/coherence-system.md",
+      "templates/frameworks/correction-protocol.md",
+      "templates/frameworks/delegation.md",
+      "templates/frameworks/development-discipline.md",
+      "templates/frameworks/falsification.md",
+      "templates/frameworks/loopback-system.md",
+      "templates/frameworks/phase-gates.md",
+      "templates/frameworks/quality-gates.md",
+      "templates/frameworks/session-protocol.md",
+      "templates/frameworks/visual-verification.md"
+    ],
+    "hooks_core": [
+      "templates/hooks/.semgrepignore.template",
+      "templates/hooks/correction-detector.template.sh",
+      "templates/hooks/post-compact-recovery.template.sh",
+      "templates/hooks/pre-edit-check.template.sh",
+      "templates/hooks/protect-databases.template.sh",
+      "templates/hooks/protected-files.template.conf",
+      "templates/hooks/session-end-safety.template.sh",
+      "templates/hooks/session-start-check.template.sh",
+      "templates/hooks/static-analysis-gate.template.sh"
+    ],
+    "hooks_standard": [
+      "templates/hooks/agent-spawn-gate.template.sh",
+      "templates/hooks/check-pbxproj.template.sh",
+      "templates/hooks/end-of-turn-check.template.sh",
+      "templates/hooks/escalation-tracker.template.sh",
+      "templates/hooks/framework-contamination-check.template.sh",
+      "templates/hooks/framework-contamination-patterns.template.conf",
+      "templates/hooks/generate-protected-files.template.sh",
+      "templates/hooks/mark_delegation_approved.template.sh",
+      "templates/hooks/permission-denied-tracker.template.sh",
+      "templates/hooks/subagent-delegation-check.template.sh"
+    ],
+    "scripts_core": [
+      "templates/scripts/db_queries.template.sh",
+      "templates/scripts/save_session.template.sh",
+      "templates/scripts/session_briefing.template.sh",
+      "templates/scripts/shared_signal.template.sh",
+      "templates/scripts/work.template.sh"
+    ],
+    "scripts_workflow": [
+      "templates/scripts/build_summarizer.template.sh",
+      "templates/scripts/build_summarizer_xcode.template.sh",
+      "templates/scripts/coherence_check.template.sh",
+      "templates/scripts/coherence_registry.template.sh",
+      "templates/scripts/fix.template.sh",
+      "templates/scripts/generate_board.template.py",
+      "templates/scripts/harvest.template.sh",
+      "templates/scripts/milestone_check.template.sh",
+      "templates/scripts/pre-commit.template.sh",
+      "templates/scripts/test_protocol.template.sh"
+    ],
+    "scripts_python": [
+      "templates/scripts/fill_placeholders.py",
+      "templates/scripts/fp_engine.py",
+      "templates/scripts/fp_registry.py",
+      "templates/scripts/fp_replacer.py",
+      "templates/scripts/verify_deployment.py"
+    ],
+    "agents_all": [
+      "templates/agents/explorer.template.md",
+      "templates/agents/implementer.template.md",
+      "templates/agents/verifier.template.md",
+      "templates/agents/worker.template.md"
+    ],
+    "rules_project": [
+      "templates/rules/AGENT_DELEGATION_TEMPLATE.md",
+      "templates/rules/CLAUDE_TEMPLATE.md",
+      "templates/rules/ROUTER_TEMPLATE.md",
+      "templates/rules/RULES_EXTENDED_TEMPLATE.md",
+      "templates/rules/RULES_TEMPLATE.md"
+    ],
+    "rules_path": [
+      "templates/rules/database-safety.template.md",
+      "templates/rules/go-standards.template.md",
+      "templates/rules/node-standards.template.md",
+      "templates/rules/python-standards.template.md",
+      "templates/rules/rust-standards.template.md",
+      "templates/rules/swift-standards.template.md",
+      "templates/rules/workflow-scripts.template.md"
+    ],
+    "settings_all": [
+      "templates/settings/settings.local.template.json",
+      "templates/settings/settings.template.json"
+    ],
+    "extended_automation": [],
+    "extended_scaffolding": []
+  },
+
+  "profiles": {
+    "standard": {
+      "includes": [
+        "frameworks_all",
+        "hooks_core",
+        "hooks_standard",
+        "scripts_core",
+        "scripts_workflow",
+        "scripts_python",
+        "agents_all",
+        "rules_project",
+        "rules_path",
+        "settings_all"
+      ]
+    },
+    "extended": {
+      "includes": [
+        "frameworks_all",
+        "hooks_core",
+        "hooks_standard",
+        "scripts_core",
+        "scripts_workflow",
+        "scripts_python",
+        "agents_all",
+        "rules_project",
+        "rules_path",
+        "settings_all",
+        "extended_automation",
+        "extended_scaffolding"
+      ]
+    }
+  },
+
+  "summary": {
+    "frameworks": 10,
+    "hooks": 19,
+    "scripts": {
+      "root": 9,
+      "template": 15,
+      "python": 5
+    },
+    "agents": 4,
+    "checks": 18,
+    "rules": 12,
+    "semgrep_rules": 2,
+    "settings": 2,
+    "dbq_commands": 15,
+    "total_systems": 111
+  }
+}

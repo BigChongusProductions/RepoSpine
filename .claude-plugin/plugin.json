@@ -1,0 +1,18 @@
+{
+  "name": "project-bootstrap",
+  "version": "1.0.0",
+  "description": "Full-stack project bootstrapper: collaborative discovery in Cowork produces specs, then Claude Code deploys a complete workflow engine with task database (Python CLI), phase gates, quality gates, agent delegation, correction protocol, coherence system, falsification protocol, loopback tracking, and 30+ infrastructure files.",
+  "author": {
+    "name": "Captain"
+  },
+  "keywords": [
+    "bootstrap",
+    "project-planning",
+    "workflow-engine",
+    "task-management",
+    "phase-gates",
+    "agent-delegation",
+    "correction-protocol",
+    "dev-framework"
+  ]
+}

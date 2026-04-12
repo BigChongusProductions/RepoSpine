@@ -1,0 +1,45 @@
+name: CI
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shell-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sqlite3 and jq
+        run: sudo apt-get install -y sqlite3 jq
+      - name: Run shell regression tests
+        run: bash tests/test_bootstrap_suite.sh --regression
+
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run Python CLI tests
+        run: bash tests/test_bootstrap_suite.sh --python-cli
+
+  plugin-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build plugin
+        run: bash build_plugin.sh
+      - name: Verify zip was created
+        run: test -f *.zip
+
+  validate-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run validate_build.py
+        run: python3 validate_build.py

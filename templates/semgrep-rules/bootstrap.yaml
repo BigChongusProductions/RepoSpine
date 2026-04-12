@@ -1,0 +1,20 @@
+rules:
+  - id: no-bare-exit
+    patterns:
+      - pattern: exit($X)
+      - pattern-not: sys.exit($X)
+    message: "Use raise SystemExit($X) instead of exit() — see dbq-code.md"
+    severity: ERROR
+    languages: [python]
+
+  - id: no-direct-sqlite
+    patterns:
+      - pattern: sqlite3.connect(...)
+    message: "Use db_queries.sh wrapper, not direct sqlite3 access"
+    severity: ERROR
+    languages: [python]
+    paths:
+      exclude:
+        - "templates/scripts/dbq/"
+        - "**/test_*.py"
+        - "**/conftest.py"

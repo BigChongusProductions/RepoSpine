@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "plugin": "project-bootstrap",
+  "prerequisites": {
+    "critical": [
+      {
+        "name": "jq",
+        "check": "command -v jq",
+        "why": "All 17 hooks require jq for JSON I/O — no fallback",
+        "install": {
+          "darwin": "brew install jq",
+          "linux": "sudo apt-get install jq"
+        }
+      },
+      {
+        "name": "python3",
+        "check": "command -v python3",
+        "min_version": "3.10",
+        "why": "dbq CLI uses match statements, walrus operator, type unions (PEP 604)",
+        "version_check": "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\"",
+        "install": {
+          "darwin": "brew install python@3.12",
+          "linux": "sudo apt-get install python3.12"
+        }
+      },
+      {
+        "name": "git",
+        "check": "command -v git",
+        "why": "Session hooks, version control, commit workflow, dirty-tree detection",
+        "install": {
+          "darwin": "xcode-select --install",
+          "linux": "sudo apt-get install git"
+        }
+      },
+      {
+        "name": "bash",
+        "check": "command -v bash",
+        "min_version": "4.0",
+        "why": "Associative arrays, ${var,,} syntax, set -o pipefail",
+        "version_check": "bash -c 'echo ${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}'",
+        "install": {
+          "darwin": "brew install bash",
+          "linux": "built-in (usually 5.x)"
+        }
+      }
+    ],
+    "important": [
+      {
+        "name": "sqlite3",
+        "check": "command -v sqlite3",
+        "why": "Direct DB queries, session_briefing.sh, backup operations",
+        "fallback": "Python sqlite3 module (bundled with Python 3.10+)",
+        "install": {
+          "darwin": "built-in",
+          "linux": "sudo apt-get install sqlite3"
+        }
+      },
+      {
+        "name": "git-config",
+        "check_commands": ["git config user.name", "git config user.email"],
+        "why": "First commit will fail without user identity configured",
+        "fix": "git config --global user.name 'Your Name' && git config --global user.email 'you@example.com'"
+      }
+    ]
+  },
+  "structural": {
+    "templates": {
+      "search_paths": [
+        "$BOOTSTRAP_DIR/templates"
+      ],
+      "key_files": [
+        "scripts/dbq/__main__.py",
+        "hooks/session-start-check.template.sh",
+        "rules/RULES_TEMPLATE.md",
+        "settings/settings.template.json"
+      ],
+      "note": "Templates are bundled in the bootstrap engine — no separate setup required",
+      "why": "Templates are source files that bootstrap_project.sh copies into new projects"
+    },
+    "frameworks": {
+      "path": "$PROJECT_DIR/frameworks/",
+      "fallback": "~/.claude/frameworks/",
+      "min_files": 7,
+      "why": "Session protocol, phase gates, delegation, correction protocol, etc. Bundled locally in v1.0."
+    }
+  },
+  "engine": {
+    "description": "The dbq CLI and supporting scripts bundled in each generated project",
+    "path": "$PROJECT_DIR/scripts/dbq/",
+    "requires": "python3 >= 3.10",
+    "note": "Copied from bootstrap engine at activation time — no global dependency"
+  },
+  "platform": {
+    "supported": ["darwin", "linux"],
+    "known_issues": {
+      "darwin": [
+        "bash ships as 3.2 — brew install bash for 5.x",
+        "grep -P not available — use grep -E",
+        "date -j flag differs from GNU date -d"
+      ],
+      "linux": [
+        "sed -i has no '' argument (handled by sedi() helper)",
+        "stat uses -c %Y not -f %m (templates handle both)"
+      ]
+    }
+  },
+  "host": {
+    "application": "Claude Code (CLI, Desktop App, or IDE extension)",
+    "features_required": ["plugins", "hooks", "skills"],
+    "plan_note": "Claude Max plan recommended for multi-model orchestration (Opus for architecture, Sonnet for implementation)",
+    "note": "Host requirements are informational — cannot be machine-checked from a hook"
+  },
+  "mcp_servers": []
+}
