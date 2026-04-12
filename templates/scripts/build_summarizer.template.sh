@@ -87,7 +87,13 @@ _step_fail() { STEPS_FAILED=$(( STEPS_FAILED + 1 )); }
 # ── Step: Lint ────────────────────────────────────────────────────────────────
 run_lint() {
   echo "── Step: Lint ──"
-  if %%LINT_COMMAND%% 2>&1; then
+  local cmd="%%LINT_COMMAND%%"
+  if [[ "$cmd" == *"%%"* ]]; then
+    echo "   Lint: SKIPPED (placeholder not configured — run fill_placeholders.py)"
+    _step_pass
+    return 0
+  fi
+  if $cmd 2>&1; then
     echo "   Lint: PASSED"
     _step_pass
   else
@@ -100,7 +106,13 @@ run_lint() {
 # ── Step: Build ───────────────────────────────────────────────────────────────
 run_build() {
   echo "── Step: Build ──"
-  if %%BUILD_COMMAND%% 2>&1; then
+  local cmd="%%BUILD_COMMAND%%"
+  if [[ "$cmd" == *"%%"* ]]; then
+    echo "   Build: SKIPPED (placeholder not configured — run fill_placeholders.py)"
+    _step_pass
+    return 0
+  fi
+  if $cmd 2>&1; then
     echo "   Build: PASSED"
     _step_pass
   else
@@ -113,7 +125,13 @@ run_build() {
 # ── Step: Test ────────────────────────────────────────────────────────────────
 run_tests() {
   echo "── Step: Test ──"
-  if %%TEST_COMMAND%% 2>&1; then
+  local cmd="%%TEST_COMMAND%%"
+  if [[ "$cmd" == *"%%"* ]]; then
+    echo "   Tests: SKIPPED (placeholder not configured — run fill_placeholders.py)"
+    _step_pass
+    return 0
+  fi
+  if $cmd 2>&1; then
     echo "   Tests: PASSED"
     _step_pass
   else

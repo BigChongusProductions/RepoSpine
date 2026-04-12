@@ -256,6 +256,7 @@ def check_c06_no_stray_placeholders(project_path: Path, is_meta: bool = False) -
                    "--include=*.md", "--include=*.sh", "--include=*.json",
                    "--exclude-dir=.git",
                    "--exclude-dir=worktrees",
+                   "--exclude=*.template.*",  # template files legitimately contain %% tokens
                    scan_path]
             rc, stdout, stderr = _run(cmd, project_path)
             if rc == 1:
@@ -273,10 +274,12 @@ def check_c06_no_stray_placeholders(project_path: Path, is_meta: bool = False) -
             return _passed(cid, name, sev,
                            "No stray placeholders in .claude/ (meta-project: templates excluded)")
 
-        # Standard project: scan everything
+        # Standard project: scan .md and .sh files (excluding *.template.* — those
+        # legitimately contain %% tokens by design, e.g. build_summarizer.template.sh)
         cmd1 = ["grep", "-rn", r"%%[A-Z_][A-Z_0-9]*%%",
                 "--include=*.md", "--include=*.sh",
                 "--exclude-dir=.git",
+                "--exclude=*.template.*",  # template files legitimately contain %% tokens
                 str(project_path)]
         rc, stdout, stderr = _run(cmd1, project_path)
         # grep exit code: 0 = matches found, 1 = no matches, 2 = error
@@ -296,6 +299,7 @@ def check_c06_no_stray_placeholders(project_path: Path, is_meta: bool = False) -
         cmd2 = ["grep", "-rn", r"%%[A-Z_][A-Z_0-9]*%%",
                 "--include=*.md", "--include=*.sh",
                 "--exclude-dir=.git",
+                "--exclude=*.template.*",  # template files legitimately contain %% tokens
                 str(project_path / ".claude")]
         rc2, stdout2, stderr2 = _run(cmd2, project_path)
         all_matches: list[str] = []
@@ -477,14 +481,19 @@ def check_c11_build_command(project_path: Path) -> CheckResult:
 def check_c12_global_lessons(project_path: Path) -> CheckResult:
     cid, name, sev = "C12", "Global Lessons File", "warning"
 
-    # v1.0 canonical: LESSONS_UNIVERSAL.md lives at project root
+    # Primary: global symlink in the user's .claude dir (canonical location per SYSTEMS_MANIFEST)
+    global_path = Path.home() / ".claude" / "LESSONS_UNIVERSAL.md"
+    if global_path.exists():
+        return _passed(cid, name, sev, f"LESSONS_UNIVERSAL.md found at {global_path}")
+
+    # Fallback: project-local copy (matches knowledge.py two-tier lookup)
     local_path = project_path / "LESSONS_UNIVERSAL.md"
     if local_path.exists():
-        return _passed(cid, name, sev, "LESSONS_UNIVERSAL.md found at project root")
+        return _passed(cid, name, sev, "LESSONS_UNIVERSAL.md found at project root (global symlink missing)")
 
-    # Not found — report failure without creating any file
     return _failed(cid, name, sev,
-                   "LESSONS_UNIVERSAL.md not found at project root")
+                   f"LESSONS_UNIVERSAL.md not found at {global_path} or project root",
+                   "Run bootstrap to create the symlink, or 'db_queries.sh promote' to create on first use")
 
 
 def check_c13_enforcement_hooks(project_path: Path, thresholds: dict | None = None) -> CheckResult:
@@ -897,11 +906,16 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(_format_human(report, verbose=args.verbose))
 
-    # Determine exit code
+    # Determine exit code.
+    # V11-020: threshold is critical_failures == 0 (hard gate) AND total_passed == total (ideal).
+    # A "15/18 score" style partial-pass threshold is intentionally NOT used here —
+    # any critical failure is an unconditional exit 1 regardless of pass count.
+    # If a numeric pass-count threshold is needed, it belongs in the test suite, not here.
     if report.critical_failures > 0:
         return 1
     if report.warning_failures > 0:
         return 2
+    # critical_failures == 0 AND warning_failures == 0 => total_passed == total
     return 0
 
 

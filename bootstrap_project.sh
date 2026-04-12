@@ -135,6 +135,13 @@ fi
 PROJECT_NAME="$1"
 PROJECT_PATH="$2"
 
+# Validate PROJECT_NAME — reject characters that break sed delimiters or shell expansion
+if [[ "$PROJECT_NAME" =~ [|/\\\"\'\`\$\&\;\<\>] ]]; then
+    echo "❌ PROJECT_NAME contains unsafe characters: $PROJECT_NAME"
+    echo "   Use only letters, numbers, spaces, hyphens, and underscores."
+    exit 1
+fi
+
 # Parse flags
 LIFECYCLE_MODE=""
 DEPLOYMENT_PROFILE=""
@@ -224,6 +231,7 @@ SCRIPT_TEMPLATES="$_TMPL_BASE/scripts"
 HOOK_TEMPLATES="$_TMPL_BASE/hooks"
 AGENT_TEMPLATES="$_TMPL_BASE/agents"
 TEMPLATE="$_TMPL_BASE/rules/RULES_TEMPLATE.md"
+CLAUDE_TEMPLATE="$_TMPL_BASE/rules/CLAUDE_TEMPLATE.md"
 
 # ── Lifecycle mode resolution ────────────────────────────────────────────────
 # When --phase is specified without --lifecycle, auto-detect from existing DB
@@ -318,28 +326,11 @@ fi
 phase_rules() {
     # Steps 1, 2, 3-6, 22: CLAUDE.md, RULES, tracking files, DELEGATION
     # ── 1. CLAUDE.md (project entry point) ──────────────────────────────────────
-    cat > CLAUDE.md << 'CLAUDEEOF'
-# %%PROJECT_NAME%% — Project Entry Point
-> Frameworks load on demand via hooks — do NOT @-import them at startup.
-
-@frameworks/session-protocol.md
-@%%PROJECT_NAME_UPPER%%_RULES.md
-@AGENT_DELEGATION.md
-@ROUTER.md
-
-> **On-demand frameworks** (loaded automatically by hooks when triggered):
-> - `correction-protocol.md` — injected by correction-detector hook on correction signal
-> - `delegation.md` — injected by pre-edit-check hook at delegation gate
-> - `phase-gates.md` — load manually before pre-task check (`db_queries.sh check <id>`)
->
-> **Optional frameworks** (add @import lines above to enable):
-> `coherence-system`, `falsification`, `loopback-system`, `quality-gates`, `visual-verification`
-
-> LESSONS file (%%PROJECT_NAME_UPPER%%_LESSONS.md) is NOT @-imported — it grows unboundedly.
-> The session-start hook injects recent lessons. Read full file on demand for correction protocol.
-> Path-specific rules in `.claude/rules/` auto-inject when touching matching files.
-> Hooks in `.claude/hooks/` enforce behavioral gates. Custom agents in `.claude/agents/`.
-CLAUDEEOF
+    sed \
+      -e "s|%%PROJECT_NAME%%|${PROJECT_NAME}|g" \
+      -e "s|%%RULES_FILE%%|${RULES_FILE}|g" \
+      -e "s|%%LESSONS_FILE%%|${LESSONS_FILE}|g" \
+      "$CLAUDE_TEMPLATE" > CLAUDE.md
 
     echo "✅ CLAUDE.md"
 
@@ -720,6 +711,16 @@ echo "⚠️  Stub. Copy full version from your bootstrap repo templates/scripts
 BUILDEOF
         chmod +x build_summarizer.sh
         echo "✅ build_summarizer.sh (stub — template not found)"
+    fi
+
+    # ── 13b. batch_pipeline.sh (resumable batch processing template) ─────────────
+    BATCH_TEMPLATE="$SCRIPT_TEMPLATES/batch_pipeline.template.sh"
+    if [ -f "$BATCH_TEMPLATE" ]; then
+        cp "$BATCH_TEMPLATE" batch_pipeline.sh
+        chmod +x batch_pipeline.sh
+        echo "✅ batch_pipeline.sh (from template — set %%BATCH_PROCESS_COMMAND%%)"
+    else
+        echo "⚠️  batch_pipeline.template.sh not found — skipping"
     fi
 
     # ── 14. generate_board.py ───────────────────────────────────────────────────
@@ -1437,11 +1438,22 @@ run_phases
 
 # Write deployment profile marker (only on full runs, not --phase partial runs)
 if [ -z "$PHASE_LIST" ]; then
-    echo "$DEPLOYMENT_PROFILE" > .bootstrap_profile
+    cat > .bootstrap_profile << EOF
+profile=$DEPLOYMENT_PROFILE
+version=$(cat "$BOOTSTRAP_DIR/VERSION" 2>/dev/null || echo "unknown")
+timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+EOF
     echo "📝 Deployment profile: $DEPLOYMENT_PROFILE (.bootstrap_profile)"
 fi
 
 # Keep the manifest for future --rollback (only on full runs)
 if [ -z "$PHASE_LIST" ] && [ -f "$_MANIFEST_FILE" ]; then
     echo "📋 Rollback manifest saved (.bootstrap_manifest)"
+fi
+
+# Write post-bootstrap manifest — lists all template-derived files for upgrade-drift detection
+if [ -z "$PHASE_LIST" ]; then
+    _POST_MANIFEST="$PROJECT_PATH/.bootstrap_created"
+    comm -13 "$_MANIFEST_FILE" <(find . -type f -not -path './.git/*' -not -name '.bootstrap_manifest' -not -name '.bootstrap_created' -not -name '.bootstrap_profile' 2>/dev/null | sort) > "$_POST_MANIFEST" 2>/dev/null || true
+    echo "📋 Created-files manifest saved (.bootstrap_created)"
 fi

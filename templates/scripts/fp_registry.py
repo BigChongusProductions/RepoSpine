@@ -1,7 +1,7 @@
 """fp_registry.py — Token registry for fill_placeholders.
 
 Defines the TokenDef and Replacement dataclasses, the _td() helper, and
-the REGISTRY dict of 41 placeholder tokens.
+the REGISTRY dict of 50 placeholder tokens.
 
 Stdlib only: dataclasses, typing
 Python 3.10+
@@ -40,7 +40,7 @@ class Replacement:
 
 
 # ---------------------------------------------------------------------------
-# Registry — 49 tokens
+# Registry — 50 tokens
 # ---------------------------------------------------------------------------
 
 def _td(name: str, category: str, files: list[str], derivation: str,
@@ -332,6 +332,12 @@ REGISTRY: dict[str, TokenDef] = {
         default="echo 'No linter configured'",
         requires_tech=True,
     ),
+    "BATCH_PROCESS_COMMAND": _td(
+        "BATCH_PROCESS_COMMAND", "script",
+        ["templates/scripts/batch_pipeline.template.sh"],
+        "Command to process a single item in the batch pipeline (receives $ITEM)",
+        default="echo \"Processing: $ITEM\"",
+    ),
     # --- Framework-specific (2) ---
     "SKIP_PATTERN_1": _td(
         "SKIP_PATTERN_1", "framework",
@@ -420,7 +426,7 @@ REGISTRY: dict[str, TokenDef] = {
 }
 
 # Development guard: fail fast if registry count drifts from expected
-assert len(REGISTRY) == 49, (
-    f"REGISTRY has {len(REGISTRY)} tokens, expected 49. "
+assert len(REGISTRY) == 50, (
+    f"REGISTRY has {len(REGISTRY)} tokens, expected 50. "
     "Update this assertion if you intentionally add/remove tokens."
 )

@@ -3,6 +3,7 @@ Falsification commands: assume, verify-assumption, verify-all, assumptions.
 
 These implement the assumption tracking and verification system.
 """
+import shlex
 import subprocess
 import sys
 from datetime import datetime
@@ -87,7 +88,7 @@ def cmd_verify_assumption(db: Database, task_id: str, assumption_id: int):
 
     print(f"   Running: {verify_cmd}")
     result = subprocess.run(
-        verify_cmd, shell=True, capture_output=True, text=True,
+        shlex.split(verify_cmd), capture_output=True, text=True,
     )
     result_output = (result.stdout + result.stderr).strip()
     if result_output:
@@ -144,7 +145,7 @@ def cmd_verify_all(db: Database, task_id: str):
             continue
 
         result = subprocess.run(
-            acmd, shell=True, capture_output=True, text=True,
+            shlex.split(acmd), capture_output=True, text=True,
         )
 
         if result.returncode == 0:

@@ -1,5 +1,6 @@
 ---
 name: bootstrap-activate
+command: /activate-engine
 description: >
   Use this skill when the user runs /activate-engine, or says "activate the engine",
   "set up the workflow", "fill placeholders", "generate requirements", or any phrase

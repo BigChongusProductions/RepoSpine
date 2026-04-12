@@ -55,15 +55,16 @@ mkdir -p "$PLUGIN_STAGE"
 
 # 1. Manifest (auto-stamp version from VERSION file)
 cp -r "$SCRIPT_DIR/.claude-plugin" "$PLUGIN_STAGE/"
-python3 -c "
-import json
-with open('$PLUGIN_STAGE/.claude-plugin/plugin.json') as f:
+python3 - "$PLUGIN_STAGE/.claude-plugin/plugin.json" "$VERSION" << 'PYEOF'
+import json, sys
+path, version = sys.argv[1], sys.argv[2]
+with open(path) as f:
     data = json.load(f)
-data['version'] = '$VERSION'
-with open('$PLUGIN_STAGE/.claude-plugin/plugin.json', 'w') as f:
+data['version'] = version
+with open(path, 'w') as f:
     json.dump(data, f, indent=2)
     f.write('\n')
-"
+PYEOF
 
 # 2. Skills (public skill allowlist)
 ALLOWED_SKILLS=(bootstrap-activate bootstrap-discovery spec-status)
@@ -223,17 +224,18 @@ if [ "$INSTALL_MODE" = true ]; then
     rm -rf "$INSTALL_STAGING"
     # Update marketplace.json version
     if [ -n "$MARKETPLACE_JSON" ] && [ -f "$MARKETPLACE_JSON" ]; then
-      python3 -c "
+      python3 - "$MARKETPLACE_JSON" "$VERSION" << 'PYEOF' 2>/dev/null && echo "  ✓ Updated marketplace registry"
 import json, sys
-with open('$MARKETPLACE_JSON') as f:
+path, version = sys.argv[1], sys.argv[2]
+with open(path) as f:
     data = json.load(f)
 for p in data.get('plugins', []):
     if p['name'] == 'project-bootstrap':
-        p['version'] = '$VERSION'
-with open('$MARKETPLACE_JSON', 'w') as f:
+        p['version'] = version
+with open(path, 'w') as f:
     json.dump(data, f, indent=2)
     f.write('\n')
-" 2>/dev/null && echo "  ✓ Updated marketplace registry"
+PYEOF
     fi
     echo ""
     echo "✓ Installed v${VERSION} to Claude app (${#PLUGIN_INSTALL_DIRS[@]} locations)"

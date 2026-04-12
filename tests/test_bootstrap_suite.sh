@@ -27,6 +27,7 @@
 #
 #   Full activation product flow (bootstraps real project):
 #   bash test_bootstrap_suite.sh --product-flow        # Bootstrap + verify + exercise full lifecycle
+#   bash test_bootstrap_suite.sh --product-verify      # Bootstrap + assert critical_failures == 0 (CI gate)
 #
 #   Other:
 #   bash test_bootstrap_suite.sh --python-cli          # Python CLI integration tests only
@@ -1873,10 +1874,9 @@ product_flow_tests() {
       PASSED=$(echo "$VERIFY_OUT" | jq -r '.passed')
       TOTAL=$(echo "$VERIFY_OUT" | jq -r '.total')
       CRIT_FAIL=$(echo "$VERIFY_OUT" | jq -r '.critical_failures')
-      # Fresh bootstraps have known gaps (stray placeholders for tech-specific
-      # commands, missing LESSONS_UNIVERSAL.md, drift below threshold).
-      # Assert: verification runs, produces structured output, ≤1 critical failure.
-      if [ "$CRIT_FAIL" -le 1 ] 2>/dev/null; then
+      # Assert: verification runs, produces structured output, zero critical failures.
+      # Warning-level failures (C11 build stub, C18 drift) are acceptable on fresh projects.
+      if [ "$CRIT_FAIL" -eq 0 ] 2>/dev/null; then
         pass "verify_deployment: $PASSED/$TOTAL passed, $CRIT_FAIL critical failure(s)"
       else
         fail "verify_deployment: $PASSED/$TOTAL passed, $CRIT_FAIL critical failure(s)"
@@ -1890,12 +1890,10 @@ product_flow_tests() {
 
   section "PF7. Deployment profile recorded"
   if [ -f "$FLOW_DIR/.bootstrap_profile" ]; then
-    local PROFILE_CONTENT
-    PROFILE_CONTENT=$(cat "$FLOW_DIR/.bootstrap_profile")
-    if [ "$PROFILE_CONTENT" = "standard" ]; then
-      pass ".bootstrap_profile contains 'standard'"
+    if grep -q "^profile=standard" "$FLOW_DIR/.bootstrap_profile"; then
+      pass ".bootstrap_profile contains profile=standard"
     else
-      fail ".bootstrap_profile contains '$PROFILE_CONTENT' (expected 'standard')"
+      fail ".bootstrap_profile missing profile=standard line"
     fi
   else
     fail ".bootstrap_profile not created"
@@ -1912,6 +1910,68 @@ product_flow_tests() {
   fi
 
   rm -rf "$FLOW_DIR"
+}
+
+# === PRODUCT-VERIFY CI GATE ==================================================
+# Bootstraps a real project and asserts critical_failures == 0 from
+# verify_deployment.py.  Intended as a fast CI gate that covers the 32 checks
+# skipped by the public RepoSpine export (files are present in a live bootstrap).
+# Run independently via: bash test_bootstrap_suite.sh --product-verify
+product_verify_tests() {
+  header "Product Verify (CI Gate)"
+  P_NAME="product-verify"
+
+  local PV_DIR="/tmp/bootstrap_test_pv_$$"
+  rm -rf "$PV_DIR"
+
+  section "PV1. Bootstrap via bootstrap_project.sh"
+  if bash "$REPO_ROOT/bootstrap_project.sh" "PVTest" "$PV_DIR" --deployment standard --non-interactive >/dev/null 2>&1; then
+    pass "bootstrap_project.sh created project successfully"
+  else
+    fail "bootstrap_project.sh failed — cannot continue product-verify"
+    rm -rf "$PV_DIR"
+    return
+  fi
+
+  section "PV2. verify_deployment.py produces JSON output"
+  local VD_SCRIPT="$PV_DIR/scripts/verify_deployment.py"
+  if [ ! -f "$VD_SCRIPT" ]; then
+    fail "verify_deployment.py not deployed to generated project"
+    rm -rf "$PV_DIR"
+    return
+  fi
+
+  local VERIFY_OUT
+  VERIFY_OUT=$(cd "$PV_DIR" && python3 scripts/verify_deployment.py "$PV_DIR" --json 2>/dev/null) || true
+
+  if ! echo "$VERIFY_OUT" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
+    fail "verify_deployment.py produced non-JSON output"
+    rm -rf "$PV_DIR"
+    return
+  fi
+  pass "verify_deployment.py produced parseable JSON"
+
+  section "PV3. critical_failures == 0"
+  local PASSED TOTAL CRIT_FAIL
+  PASSED=$(echo "$VERIFY_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('passed',0))" 2>/dev/null || echo "0")
+  TOTAL=$(echo "$VERIFY_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('total',0))" 2>/dev/null || echo "0")
+  CRIT_FAIL=$(echo "$VERIFY_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('critical_failures',1))" 2>/dev/null || echo "1")
+
+  if [ "$CRIT_FAIL" -eq 0 ] 2>/dev/null; then
+    pass "verify_deployment: $PASSED/$TOTAL passed, 0 critical failures"
+  else
+    fail "verify_deployment: $PASSED/$TOTAL passed, $CRIT_FAIL critical failure(s) (expected 0)"
+    # Print failing checks to aid diagnosis
+    echo "$VERIFY_OUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+for c in d.get('checks', []):
+    if not c.get('passed', True):
+        print('  FAIL:', c.get('name','?'), '-', c.get('detail',''))
+" 2>/dev/null | head -10 | while IFS= read -r l; do warn "$l"; done
+  fi
+
+  rm -rf "$PV_DIR"
 }
 
 # === CROSS-PROJECT VALIDATION ================================================
@@ -2922,8 +2982,8 @@ phase_flag_tests() {
     >/dev/null 2>&1 || true
   local DIFF_OUT
   DIFF_OUT=$(diff \
-    <(cd "$TEST_A" && find . -not -path './.git/*' -not -name '.bootstrap_manifest' -not -name '.bootstrap_profile' -type f | sort 2>/dev/null) \
-    <(cd "$TEST_B" && find . -not -path './.git/*' -not -name '.bootstrap_manifest' -not -name '.bootstrap_profile' -type f | sort 2>/dev/null) \
+    <(cd "$TEST_A" && find . -not -path './.git/*' -not -name '.bootstrap_manifest' -not -name '.bootstrap_created' -not -name '.bootstrap_profile' -type f | sort 2>/dev/null) \
+    <(cd "$TEST_B" && find . -not -path './.git/*' -not -name '.bootstrap_manifest' -not -name '.bootstrap_created' -not -name '.bootstrap_profile' -type f | sort 2>/dev/null) \
     2>/dev/null || true)
   if [ -z "$DIFF_OUT" ]; then
     pass "Full run and all-phases explicit run produce identical file sets"
@@ -5051,6 +5111,11 @@ main() {
 
   if [ "${1:-}" = "--product-flow" ]; then
     product_flow_tests
+    print_summary; exit 0
+  fi
+
+  if [ "${1:-}" = "--product-verify" ]; then
+    product_verify_tests
     print_summary; exit 0
   fi
 

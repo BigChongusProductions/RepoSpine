@@ -1,5 +1,6 @@
 ---
 name: bootstrap-discovery
+command: /new-project
 description: >
   Use this skill when the user says "I want to build something", "new project",
   "start a new project", "help me plan", "bootstrap a project", "scaffold this idea",

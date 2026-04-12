@@ -1,5 +1,6 @@
 ---
 name: spec-status
+command: /spec-status
 description: >
   Show bootstrap progress and spec completion status. Use when the user runs /spec-status,
   says "check status", "where are we", "bootstrap status", or wants to see the current

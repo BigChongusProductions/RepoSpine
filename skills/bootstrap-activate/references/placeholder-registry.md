@@ -115,6 +115,7 @@ These tokens appear only in specific scripts and require careful derivation.
 |---|---|---|---|---|
 | 11 | `%%LINT_COMMAND%%` | Linter invocation for the project's tech stack | templates/scripts/pre-commit.template.sh | Detect from root config files. E.g., `ruff check .` (Python), `eslint src/ --max-warnings 0` (Node.js), `golangci-lint run` (Go). fp_engine.py derives this from TechDetector. |
 | 12 | `%%TYPE_CHECK_COMMAND%%` | Type-checker invocation for the project's tech stack | templates/scripts/pre-commit.template.sh | Detect from root config files. E.g., `mypy src/` (Python), `tsc --noEmit` (TypeScript). Set to `true` as a no-op for stacks without a type checker (e.g., plain Go). fp_engine.py derives this from TechDetector. |
+| 13 | `%%BATCH_PROCESS_COMMAND%%` | Processing command for batch pipeline items | templates/scripts/batch_pipeline.template.sh | The command to execute for each line in the input file. E.g., `curl -s "$ITEM"`, `python3 process.py "$ITEM"`. Left as TODO stub in non-interactive mode. |
 
 ### Xcode / Swift (conditional — only when .xcodeproj detected)
 

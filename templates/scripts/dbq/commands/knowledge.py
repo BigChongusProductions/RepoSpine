@@ -222,6 +222,12 @@ def cmd_log_lesson(
         print("❌ Failed to write lesson to file")
         sys.exit(1)
 
+    # Clear correction-pending state file so pre-edit-check.sh gate lifts
+    db_path = Path(config.db_path)
+    pending_file = db_path.parent / ".claude" / "hooks" / ".correction_pending"
+    if pending_file.exists():
+        pending_file.unlink()
+
     # --bp escalation
     if bp_category:
         _escalate_to_backlog(

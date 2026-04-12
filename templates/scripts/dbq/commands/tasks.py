@@ -819,6 +819,16 @@ def _check_milestone_gate(
     db: Database, task_id: str, phase: str, sort_order: int
 ) -> list:
     """Check milestone gate rules (lines 372-506). Returns list of reasons."""
+    # If this task was already confirmed by Master, skip ALL milestone gate
+    # rules — the approval was already recorded and re-firing would block
+    # forward progress unnecessarily.
+    already_confirmed = db.fetch_scalar(
+        "SELECT COUNT(*) FROM milestone_confirmations WHERE task_id = ?",
+        (task_id,),
+    )
+    if already_confirmed and already_confirmed > 0:
+        return []
+
     reasons = []
 
     # Rule 1: First Claude task in this phase
@@ -867,13 +877,6 @@ def _check_milestone_gate(
             )
 
     # Rule 4: Rolling checkpoint
-    # Skip if THIS task was already confirmed (prevents re-fire after confirm)
-    already_confirmed = db.fetch_scalar(
-        "SELECT COUNT(*) FROM milestone_confirmations WHERE task_id = ?",
-        (task_id,),
-    )
-    if already_confirmed and already_confirmed > 0:
-        return reasons  # Rules 1-3 only; rolling checkpoint is satisfied
 
     rolling_threshold = 5
     last_confirmed_sort = db.fetch_scalar(

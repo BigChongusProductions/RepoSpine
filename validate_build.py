@@ -123,6 +123,35 @@ def _extract_allowed_skills(build_plugin: Path) -> list[str]:
     return skills
 
 
+def _build_command_skill_map(skills_dir: Path) -> dict[str, str]:
+    """Build a command-to-skill mapping by reading 'command:' from SKILL.md frontmatter.
+
+    Scans every skills/<name>/SKILL.md for a YAML frontmatter block (--- delimited)
+    and extracts the optional 'command' field.  Returns a dict mapping each slash-command
+    string to its skill directory name, e.g. {'/new-project': 'bootstrap-discovery'}.
+    Skills without a 'command' field are silently skipped.
+    """
+    mapping: dict[str, str] = {}
+    if not skills_dir.is_dir():
+        return mapping
+    for skill_dir in skills_dir.iterdir():
+        if not skill_dir.is_dir():
+            continue
+        skill_md = skill_dir / "SKILL.md"
+        if not skill_md.exists():
+            continue
+        text = skill_md.read_text(encoding="utf-8")
+        # Extract YAML frontmatter block (between first pair of --- lines)
+        fm_match = re.match(r"^---\n(.*?)\n---", text, re.DOTALL)
+        if not fm_match:
+            continue
+        frontmatter = fm_match.group(1)
+        cmd_match = re.search(r"^command:\s*(\S+)", frontmatter, re.MULTILINE)
+        if cmd_match:
+            mapping[cmd_match.group(1)] = skill_dir.name
+    return mapping
+
+
 def check_v01_skill_command_match(repo: Path) -> CheckResult:
     """Public skills in build_plugin.sh ALLOWED_SKILLS each have a SKILL.md,
     and every README Commands slash-command maps to an allowed skill."""
@@ -153,17 +182,13 @@ def check_v01_skill_command_match(repo: Path) -> CheckResult:
             failures.append(f"Allowed skill '{skill}' missing SKILL.md at skills/{skill}/")
 
     # Check 2: README Commands table slash-commands map to allowed skills
-    # Known command-to-skill mappings (command names differ from skill directory names)
-    _COMMAND_SKILL_MAP: dict[str, str] = {
-        "/new-project": "bootstrap-discovery",
-        "/activate-engine": "bootstrap-activate",
-        "/spec-status": "spec-status",
-    }
+    # Build command-to-skill mapping declaratively from SKILL.md frontmatter
+    command_skill_map = _build_command_skill_map(skills_dir)
     if readme.exists():
         readme_commands = _extract_readme_commands(readme)
         details.append(f"README commands: {readme_commands}")
         for cmd in readme_commands:
-            mapped_skill = _COMMAND_SKILL_MAP.get(cmd)
+            mapped_skill = command_skill_map.get(cmd)
             if mapped_skill:
                 if mapped_skill not in allowed_skills:
                     failures.append(
@@ -304,25 +329,12 @@ def check_v04_manifest_agreement(repo: Path) -> CheckResult:
     rules_dir = repo / "templates" / "rules"
     dbq_commands_dir = repo / "templates" / "scripts" / "dbq" / "commands"
 
-    def count_md(d: Path) -> int:
-        return len([f for f in d.iterdir() if f.suffix == ".md"]) if d.exists() else 0
-
-    def count_files(d: Path) -> int:
-        return len([f for f in d.iterdir() if f.is_file()]) if d.exists() else 0
-
-    def count_py_commands(d: Path) -> int:
-        return len([
-            f for f in d.iterdir()
-            if f.is_file() and f.suffix == ".py"
-            and f.name not in ("__init__.py",)
-        ]) if d.exists() else 0
-
     actual: dict[str, int] = {
-        "frameworks": count_md(frameworks_dir),  # .md only, excludes sync.sh
-        "hooks": count_files(hooks_dir),
-        "agents": count_md(agents_dir),
-        "rules": count_files(rules_dir),
-        "dbq_commands": count_py_commands(dbq_commands_dir),
+        "frameworks": _count_dir(frameworks_dir, lambda f: f.suffix == ".md"),  # .md only, excludes sync.sh
+        "hooks": _count_dir(hooks_dir),
+        "agents": _count_dir(agents_dir, lambda f: f.suffix == ".md"),
+        "rules": _count_dir(rules_dir),
+        "dbq_commands": _count_dir(dbq_commands_dir, lambda f: f.suffix == ".py" and f.name != "__init__.py"),
     }
 
     manifest_counts: dict[str, int] = {
@@ -386,6 +398,17 @@ _DEPLOYED_GLOBS: list[tuple[str, str]] = [
     ("hooks", "*.template.sh"),
     ("agents", "*.template.md"),
 ]
+
+
+def _count_dir(d: Path, predicate: object = None) -> int:
+    """Count files in directory *d* matching *predicate(file)*.
+
+    *predicate* is a callable that receives a Path and returns bool.
+    If None, counts all plain files.  Returns 0 when *d* does not exist.
+    """
+    if not d.exists():
+        return 0
+    return sum(1 for f in d.iterdir() if f.is_file() and (predicate is None or predicate(f)))
 
 
 def _is_exception_line(line: str) -> bool:

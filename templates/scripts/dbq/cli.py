@@ -365,6 +365,19 @@ def main(argv: Optional[List[str]] = None):
     p_drift.add_argument("--json", action="store_true", dest="json_output", help="JSON output")
     p_drift.add_argument("--quiet", action="store_true", help="One-line summary")
 
+    # ── Upgrade drift ──
+    p_ud = subparsers.add_parser(
+        "upgrade-drift",
+        help="Report upgrade drift for a generated project (.bootstrap_profile + .bootstrap_manifest)",
+    )
+    p_ud.add_argument(
+        "project_path", nargs="?", default="",
+        help="Path to generated project (default: current project root)",
+    )
+    p_ud.add_argument("--json", action="store_true", dest="json_output", help="JSON output")
+    p_ud.add_argument("--all", action="store_true", dest="show_all",
+                      help="Show all files, not just missing ones")
+
     # ── lint ──
     p_lint = subparsers.add_parser("lint", help="Structural lint checks")
     p_lint.add_argument("--fix", action="store_true", help="Auto-fix where possible")
@@ -740,6 +753,15 @@ def _dispatch(args, db, config):
     elif cmd == "drift":
         from .commands.drift import cmd_drift
         cmd_drift(db, config, json_output=args.json_output, quiet=args.quiet)
+
+    elif cmd == "upgrade-drift":
+        from .commands.upgrade_drift import cmd_upgrade_drift
+        cmd_upgrade_drift(
+            db, config,
+            project_path=args.project_path,
+            json_output=args.json_output,
+            show_all=args.show_all,
+        )
 
     # ── Lint ──
     elif cmd == "lint":
