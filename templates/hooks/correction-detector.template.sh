@@ -19,13 +19,49 @@ if [ -z "$PROMPT" ]; then
     exit 0
 fi
 
-# Correction signal patterns (case-insensitive)
-# These are phrases that indicate the user is correcting Claude's previous work.
-# Kept broad intentionally — false positives (extra context) are cheap,
-# false negatives (missed corrections) cause lesson-logging failures.
-SIGNALS="didn't work|did not work|doesn't work|does not work|failed|wrong|broken|not right|why didn't you|why did you|that's not|thats not|no no|still broken|same error|same issue|try again|that broke|not what I|you forgot|you missed|you skipped|ugh|come on|seriously\?"
+# Skip slash command invocations — they're skill expansions, not user corrections
+echo "$PROMPT" | grep -q '<command-name>' && exit 0
+echo "$PROMPT" | grep -q '<command-message>' && exit 0
 
-if echo "$PROMPT" | grep -qiE "$SIGNALS"; then
+# Skip messages that are primarily tool/system output (high false-positive risk)
+echo "$PROMPT" | grep -q '<task-notification>' && exit 0
+# If prompt is ENTIRELY system-reminders with no user text, skip
+USER_ONLY=$(echo "$PROMPT" | sed '/<system-reminder>/,/<\/system-reminder>/d' | sed '/^$/d' || true)
+if [ -z "$USER_ONLY" ]; then
+    exit 0
+fi
+
+# Aggressive stripping of non-user content:
+# 1. System reminder blocks (multi-line)
+# 2. Code blocks (``` fenced)
+# 3. Task notification blocks
+# 4. ALL XML/HTML-style tags and their content
+# 5. Lines starting with common tool output prefixes
+USER_TEXT=$(echo "$PROMPT" | \
+    sed '/<system-reminder>/,/<\/system-reminder>/d' | \
+    sed '/^```/,/^```/d' | \
+    sed '/<task-notification>/,/<\/task-notification>/d' | \
+    sed '/<[a-zA-Z_:-]*>/,/<\/[a-zA-Z_:-]*>/d' | \
+    sed 's/<[^>]*>//g' | \
+    grep -vE '^\s*(✅|❌|⚠️|──|═|╔|╚|║|\[rerun|Checks:|Pass:|Fail:|FAILURE|PASSED|Summary:|Hook |hook )' || true)
+
+if [ -z "$USER_TEXT" ]; then
+    exit 0
+fi
+
+# Minimum length check — very short messages after stripping are unlikely corrections
+CHAR_COUNT=${#USER_TEXT}
+if [ "$CHAR_COUNT" -lt 10 ]; then
+    exit 0
+fi
+
+# Correction signal patterns (case-insensitive)
+# Phrase patterns are specific enough to match as-is
+# Word patterns use \b boundaries to avoid substring matches (e.g. "wrongly")
+PHRASE_SIGNALS="didn't work|did not work|doesn't work|does not work|that failed|not right|why didn't you|why did you|that's not|thats not|no no|still broken|same error|same issue|try again|that broke|not what I|you forgot|you missed|you skipped|come on"
+WORD_SIGNALS="\bwrong\b|\bbroken\b|\bugh\b|\bseriously\?"
+
+if echo "$USER_TEXT" | grep -qiE "$PHRASE_SIGNALS|$WORD_SIGNALS"; then
     jq -n '{
         hookSpecificOutput: {
             hookEventName: "UserPromptSubmit",
