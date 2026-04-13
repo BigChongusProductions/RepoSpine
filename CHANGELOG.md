@@ -4,6 +4,35 @@ All notable changes to project-bootstrap are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+### v1.2.0
+- **New `/start-session` skill** — Manual session briefing re-trigger with drift checking. Validates NEXT_SESSION.md against current repo state (task status, new commits, working tree changes). Fills the gap between auto SessionStart hook and PostCompact recovery
+- **`/handoff` improved** — New `## Avoid` section captures failed approaches and dead ends so the next session doesn't repeat mistakes. Conditional (omitted when empty), cut first if over 20-line limit. Updated triggers for pre-compaction use ("before compacting", "preserve context")
+- **`/end-session` improved** — Added gotchas extraction step before delegating to `/handoff`, ensuring failed approaches are surfaced even on direct session close
+- **`/adversarial-review` registered** — Existing multi-model review skill (Gemini, Ollama, Codex, Opus) now accessible as a slash command. Removed overly broad "review this" trigger phrase
+- **`save_session.py` format parity** — `generate_next_session_md()` now supports optional `avoid` key for `## Avoid` section, keeping skill and Python script output in sync
+- **Export contamination guards expanded** — `export_public.sh --verify` now checks all 10 internal skills (was 3), closing a gap where 7 internal skills had no absence verification
+- **README drift fixed** — Hook count corrected from 21 to 16 template hooks
+
+### v1.1.0
+- **Verify deployment fixes** — Fixed split-brain between bootstrap and verification: C11 (build stub graceful exit for unsubstituted placeholders), C12 (LESSONS_UNIVERSAL.md two-tier global/local lookup), C06 (stray placeholder check now scans .sh files, excludes *.template.*)
+- **CLAUDE_TEMPLATE.md wired in** — Replaced dead inline heredoc with sed substitution against the actual template file. The test suite already used the template; bootstrap_project.sh was the outlier.
+- **Bootstrap provenance** — `.bootstrap_profile` now records version, timestamp, and profile. New `.bootstrap_created` manifest lists template-derived files for upgrade drift detection
+- **New dbq command: `upgrade-drift`** — Reads provenance metadata and checks template-derived file presence in generated projects. Foundation for v1.2 hash-based diffing
+- **Token/cost logging** — Two-point JSONL logging in agent-spawn-gate (PreToolUse) and escalation-tracker (SubagentStop). Tracks tier, duration, task ID per spawn. Stored in `.ag_communications/usage.jsonl`
+- **Correction-detector soft-block** — Writes `.correction_pending` state file on correction signal; pre-edit-check warns until lesson is logged via `log-lesson` (which auto-clears the file)
+- **3 new skills** — `/task` (standardized pre-check → implement → verify → done workflow), `/handoff` (structured NEXT_SESSION.md generation), `/end-session` (full session close with safety checks)
+- **Task-done-detector hook** — Fires on `db_queries.sh done`, detects phase completion, suggests gate-pass
+- **Session-end-safety hook** — Fires on Stop event, warns about uncommitted changes, stale NEXT_SESSION.md, IN_PROGRESS tasks
+- **Phase-gate-cleanup hook** — Auto-cleans stale state files after gate-pass, warns about orphaned locks and untracked workspaces
+- **Declarative SKILL_MAP** — `_COMMAND_SKILL_MAP` in validate_build.py now reads `command:` from SKILL.md frontmatter instead of hardcoding
+- **Security fixes** — `shell=True` → `shlex.split` in falsification.py (command injection), PROJECT_NAME input validation in bootstrap_project.sh (sed delimiter collision)
+- **Path resolution hardening** — 5 hooks fixed: CWD validation, `// empty` jq guards, numeric guards on arithmetic, `$(pwd)` fallback removed
+- **CONFIRM gate re-fire bug** — Moved `already_confirmed` check to top of `_check_milestone_gate` so confirmed tasks don't re-fire
+- **PF6 threshold tightened** — Test suite now asserts `CRIT_FAIL == 0` (was `<= 1`), PF7 updated for multi-line `.bootstrap_profile` format
+- **Consolidation** — build_plugin.sh inline Python extracted to heredoc with positional args, validate_build.py counting functions unified into `_count_dir` helper
+- **Cleanup** — Removed redundant subagent-delegation-check.sh hook, stale state file cleanup on session start, comprehensive .gitignore/.claudeignore updates
+- **36 tasks completed** across P1-DISCOVER through P4-VALIDATE, Gemini adversarial review with 2 security issues found and fixed
+
 ### v1.0.0
 - **Public release as RepoSpine** — sanitized public repo export via `export_public.sh` with whitelist manifest (`public_manifest.txt`), 33 verification checks, neutral git identity, path safety blocklist
 - **4-model adversarial review** — pre-release validation with Gemini Pro, Ollama gemma4, Opus code-reviewer, and code-simplifier. 8 findings fixed: YAML colon-space parse failure, path injection, V07 coverage gap, developer identity leak

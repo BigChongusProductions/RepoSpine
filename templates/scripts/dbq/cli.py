@@ -36,6 +36,10 @@ def main(argv: Optional[List[str]] = None):
         "--files", nargs="+", default=None,
         help="Specific files to stage (avoids git add -A cross-contamination in parallel work)",
     )
+    p_done.add_argument(
+        "--research", action="store_true",
+        help="Research-only task — skip auto-commit (no code changes to commit)",
+    )
 
     # ── check ──
     p_check = subparsers.add_parser("check", help="Pre-task safety check")
@@ -439,7 +443,8 @@ def _dispatch(args, db, config):
     # ── Core task commands (PoC) ──
     elif cmd == "done":
         from .commands.tasks import cmd_done
-        cmd_done(db, config, args.task_id, args.skip_break, args.files)
+        cmd_done(db, config, args.task_id, args.skip_break, args.files,
+                getattr(args, 'research', False))
 
     elif cmd == "check":
         from .commands.tasks import cmd_check

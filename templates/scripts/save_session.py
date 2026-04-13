@@ -390,6 +390,14 @@ def generate_next_session_md(state: dict, project_name: str, summary: str = "") 
         for c in completed[:5]:
             lines.append(c)
 
+    # Avoid section — only if avoid items exist
+    avoid_items = state.get("avoid", [])
+    if avoid_items:
+        lines.append("")
+        lines.append("## Avoid")
+        for a in avoid_items[:2]:
+            lines.append(f"- {a}")
+
     # Warnings section — only if warnings exist
     eval_warnings = (eval_data or {}).get("warnings", [])
     if eval_warnings:

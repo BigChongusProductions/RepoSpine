@@ -1,4 +1,4 @@
-# project-bootstrap v1.0.0
+# project-bootstrap v1.2.0
 
 Describe your idea, get a complete development workflow engine. Turns an empty folder into a fully operational Claude Code environment with 111 integrated components — from discovery interview to deployed task system.
 
@@ -66,7 +66,7 @@ project-bootstrap/                      ← This repo (single source of truth)
   │   ├── scripts/                      ← Workflow scripts + Python CLI (dbq/)
   │   ├── frameworks/                   ← 10 framework files (project-agnostic)
   │   ├── rules/                        ← RULES, CLAUDE, AGENT_DELEGATION templates
-  │   ├── hooks/                        ← 19 behavioral enforcement hooks
+  │   ├── hooks/                        ← 16 behavioral enforcement hooks
   │   ├── agents/                       ← 4 sub-agent definitions
   │   └── settings/                     ← settings.json templates
   ├── tests/                            ← Bootstrap test suite
@@ -78,7 +78,7 @@ project-bootstrap/                      ← This repo (single source of truth)
   ├── AGENT_DELEGATION.md               ← 6-tier model + task delegation map
   ├── refs/                             ← Progressive disclosure (on-demand)
   ├── specs/                            ← 6 spec files from bootstrap
-  ├── .claude/hooks/                    ← 19 behavioral enforcement hooks
+  ├── .claude/hooks/                    ← 16 behavioral enforcement hooks
   ├── .claude/agents/                   ← implementer + worker sub-agents
   ├── .claude/settings.json             ← Permissions + hook wiring
   ├── db_queries.sh                     ← 15 command modules across task lifecycle

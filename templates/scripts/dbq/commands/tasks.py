@@ -19,7 +19,7 @@ from .. import output
 # ── done command ──────────────────────────────────────────────────────
 
 def cmd_done(db: Database, config, task_id: str, skip_break: bool = False,
-             files: Optional[List[str]] = None):
+             files: Optional[List[str]] = None, research: bool = False):
     """Mark a task DONE. Side effects: auto-commit + push, phase-complete banner.
 
     Matches db_queries_legacy.template.sh lines 987-1166.
@@ -31,6 +31,8 @@ def cmd_done(db: Database, config, task_id: str, skip_break: bool = False,
         files: Specific files to stage. When provided, only these files are
                staged instead of ``git add -A``. Use this during parallel work
                to prevent cross-task contamination in commits.
+        research: If True, skip auto-commit entirely. For investigation-only
+                  tasks that produce no code changes.
     """
     # Validate task exists
     task = db.fetch_one(
@@ -66,8 +68,9 @@ def cmd_done(db: Database, config, task_id: str, skip_break: bool = False,
     if track == "loopback":
         _handle_loopback_done(db, task_id)
 
-    # Auto-commit on task completion
-    _auto_commit(db, task_id, phase, config, files=files)
+    # Auto-commit on task completion (skip for research-only tasks)
+    if not research:
+        _auto_commit(db, task_id, phase, config, files=files)
 
     # Clear hook state — prevents stale tier gate from blocking post-task work
     hooks_dir = config.project_dir / ".claude" / "hooks"
