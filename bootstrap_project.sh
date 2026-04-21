@@ -118,6 +118,7 @@ if [ $# -lt 2 ]; then
     echo "  rules        CLAUDE.md, RULES, LESSONS, MEMORY, DELEGATION"
     echo "  hooks        .claude/hooks/ from templates"
     echo "  agents       .claude/agents/ (implementer + worker)"
+    echo "  skills       .claude/skills/ (per-project skill library)"
     echo "  settings     .claude/settings.json + settings.local.json"
     echo "  init         .gitignore, refs/, framework verification, knowledge harvest"
     echo "  placeholders Universal %%PLACEHOLDER%% sweep (legacy — prefer fill_placeholders.py)"
@@ -230,6 +231,7 @@ fi
 SCRIPT_TEMPLATES="$_TMPL_BASE/scripts"
 HOOK_TEMPLATES="$_TMPL_BASE/hooks"
 AGENT_TEMPLATES="$_TMPL_BASE/agents"
+SKILL_TEMPLATES="$_TMPL_BASE/skills"
 TEMPLATE="$_TMPL_BASE/rules/RULES_TEMPLATE.md"
 CLAUDE_TEMPLATE="$_TMPL_BASE/rules/CLAUDE_TEMPLATE.md"
 
@@ -1084,6 +1086,41 @@ phase_agents() {
     fi
 }
 
+phase_skills() {
+    # Step 25b: .claude/skills/ (per-project skill library harvested from templates/skills/)
+    if [ -d "$SKILL_TEMPLATES" ]; then
+        mkdir -p .claude/skills
+        local SKILL_COUNT=0
+        for skill_dir in "$SKILL_TEMPLATES"/*/; do
+            [ -d "$skill_dir" ] || continue
+            local SKILL_NAME
+            SKILL_NAME="$(basename "$skill_dir")"
+            mkdir -p ".claude/skills/$SKILL_NAME"
+            # Copy every file recursively; each skill may carry SKILL.md + scripts/ + templates/ + gotchas.md
+            cp -R "$skill_dir"/. ".claude/skills/$SKILL_NAME/" 2>/dev/null || true
+            # Ensure any scripts are executable
+            if [ -d ".claude/skills/$SKILL_NAME/scripts" ]; then
+                chmod +x ".claude/skills/$SKILL_NAME/scripts/"*.sh 2>/dev/null || true
+            fi
+            if [ -f ".claude/skills/$SKILL_NAME/SKILL.md" ]; then
+                SKILL_COUNT=$((SKILL_COUNT + 1))
+            fi
+        done
+        echo "✅ .claude/skills/ ($SKILL_COUNT skills deployed)"
+
+        # Research skill ships an optional provider config that lands at .claude/research-providers.conf
+        local RESEARCH_CONF="$_TMPL_BASE/config/research-providers.template.conf"
+        if [ -f ".claude/skills/research/SKILL.md" ] && [ -f "$RESEARCH_CONF" ]; then
+            if [ ! -f ".claude/research-providers.conf" ]; then
+                cp "$RESEARCH_CONF" ".claude/research-providers.conf"
+                echo "✅ .claude/research-providers.conf (research skill tier config)"
+            fi
+        fi
+    else
+        echo "⚠️  Skill templates not found at $SKILL_TEMPLATES — skipping"
+    fi
+}
+
 phase_settings() {
     # Steps 18, 24: settings.local.json + settings.json (hook wiring)
     # ── .claude/rules/ (path-specific rule injection) ────────────────────────────
@@ -1390,6 +1427,7 @@ run_phases() {
         phase_rules
         phase_hooks
         phase_agents
+        phase_skills
         phase_settings
         phase_init
         phase_placeholders
@@ -1405,13 +1443,14 @@ run_phases() {
                 rules)        phase_rules ;;
                 hooks)        phase_hooks ;;
                 agents)       phase_agents ;;
+                skills)       phase_skills ;;
                 settings)     phase_settings ;;
                 init)         phase_init ;;
                 placeholders) phase_placeholders ;;
                 git)          phase_git ;;
                 *)
                     echo "⚠️  Unknown phase: $phase"
-                    echo "   Available: database,scripts,frameworks,rules,hooks,agents,settings,init,placeholders,git"
+                    echo "   Available: database,scripts,frameworks,rules,hooks,agents,skills,settings,init,placeholders,git"
                     exit 1
                     ;;
             esac

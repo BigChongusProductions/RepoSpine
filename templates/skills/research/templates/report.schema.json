@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ResearchReport",
+  "description": "Full research report from the /research pipeline (generic shape).",
+  "type": "object",
+  "required": ["topic", "date", "subQuestions", "activeTiers", "retrievalRounds", "claims", "stats", "reconciliation"],
+  "properties": {
+    "topic": {
+      "type": "string",
+      "description": "Research topic as provided by the user"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO date when research was conducted"
+    },
+    "activeTiers": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["T1", "T2", "T3", "T4"] },
+      "minItems": 1,
+      "description": "Tiers that actually ran (after capability probe)"
+    },
+    "skippedTiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tier", "reason"],
+        "properties": {
+          "tier":   { "type": "string", "enum": ["T1", "T2", "T3", "T4"] },
+          "reason": { "type": "string" }
+        }
+      },
+      "description": "Tiers skipped due to unavailability or disabled config"
+    },
+    "subQuestions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Sub-questions decomposed in Phase 1"
+    },
+    "budget": {
+      "type": "object",
+      "properties": {
+        "geminiAllocated": { "type": "integer", "minimum": 0 },
+        "geminiUsed":      { "type": "integer", "minimum": 0 }
+      }
+    },
+    "retrievalRounds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3,
+      "description": "Number of retrieval rounds (1 = no re-retrieval, max 3)"
+    },
+    "claims": {
+      "type": "array",
+      "items": { "$ref": "claim.schema.json" }
+    },
+    "gaps": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Sub-questions that remain unanswered after all retrieval rounds"
+    },
+    "stats": {
+      "type": "object",
+      "required": ["total", "high", "medium", "low", "disputed", "sources"],
+      "properties": {
+        "total":     { "type": "integer", "minimum": 0 },
+        "high":      { "type": "integer", "minimum": 0 },
+        "medium":    { "type": "integer", "minimum": 0 },
+        "low":       { "type": "integer", "minimum": 0 },
+        "disputed":  { "type": "integer", "minimum": 0 },
+        "sources":   { "type": "integer", "minimum": 0, "description": "Total unique sources across all claims" }
+      }
+    },
+    "reconciliation": {
+      "type": "object",
+      "required": ["agreements", "contradictions"],
+      "properties": {
+        "agreements":    { "type": "integer", "minimum": 0 },
+        "contradictions":{ "type": "integer", "minimum": 0 },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["claim", "field", "values", "resolution"],
+            "properties": {
+              "claim":      { "type": "string" },
+              "field":      { "type": "string" },
+              "values":     { "type": "array", "items": { "type": "string" } },
+              "resolution": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

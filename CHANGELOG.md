@@ -4,6 +4,43 @@ All notable changes to project-bootstrap are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+### v1.3.0
+**RB → bootstrap harvest release.** Innovations that matured in RomaniaBattles (hook observability, scope-aware delegation gate, bug-fix hooks, reusable skills) are now baked into the templates so every bootstrapped project inherits them.
+
+**⚠️ BREAKING — router consolidation.** `settings.template.json` now uses two consolidated routers (`pre-tool-gate.sh`, `post-tool-check.sh`) instead of per-tool matchers. In-place upgrades of v1.2 projects must run `dbq upgrade-drift-settings` first — it emits a three-way merge of BASE/OURS/THEIRS, preserves custom hooks, and refuses auto-apply on conflict.
+
+**Hook observability (new)**
+- `lib-fire-counter.sh` — append-only JSONL telemetry sourced by every hook
+- `lib-scope-counter.sh` — scope tracker replacing the EDIT_COUNT heuristic. Concurrency-hardened (atomic rename + flock, noclobber-sentinel fallback on macOS)
+- `show-fire-rates.sh` — per-hook fire rates + dead-hook list
+- Extended `refs/hook-state-formats.md` with `.delegation_scope.json`, `.scope_history.jsonl`, `.fire-counts.jsonl`, `.active-plan`
+
+**Hook bug fixes**
+- `end-of-turn-check.sh` — scope-aware Check 2 (replaces EDIT_COUNT>8), dual-format `.health_cache` tolerance, opt-out discovery enforcement, parameterized task-ID regex
+- `pre-edit-check.sh` — wholesale replacement with lib-scope-counter integration + 6h plan-marker suppression
+- `session-start-check.sh` — handoff drift detection, regex-safe pgrep scope fix, comprehensive WAL/SHM/journal cleanup
+- `verify-handoff.template.sh` — new script (dependency of session-start-check)
+
+**New skills (new `templates/skills/` directory)**
+- `design-review` — 7-category visual design audit
+- `web-design-guidelines` — Vercel's Web Interface Guidelines fetcher
+- `react-components` — Stitch → React conversion workflow
+- `research` — multi-source research pipeline with capability-detection preamble (`probe-providers.sh`), generic claim schema with `domain_metadata`, per-project provider config
+- `verify-visual` — contract-driven Playwright harness (routes/components/interactions/a11y/visual-regression/performance specs). `visual-contract.json` declares surface; no hardcoded selectors
+
+**Telemetry retrofit**
+- `correction-detector.sh` — fire-counter sourcing + colloquial signal patterns + rotated debug log
+- `escalation-tracker.sh`, `subagent-delegation-check.sh` — fire-counter sourcing
+- `session-end-safety.sh` — adopts the RB warnings-based checks; cleans `.delegation_scope.json`
+- `mark_plan_active.sh` + `mark_plan_done.sh` — manage `.active-plan` marker for 6h scope suppression
+
+**Migration tooling**
+- `dbq upgrade-drift-settings` — three-way merge (BASE/OURS/THEIRS) for settings.json. Modes: `--dry-run` (default), `--apply` (refuses with conflicts), `--emit-patch`
+- `dbq rollback-settings` — restore from `.pre-v1.3` backup
+
+**Bootstrap integration**
+- New `phase_skills` dispatcher in `bootstrap_project.sh` copies `templates/skills/` → `.claude/skills/` and drops `templates/config/research-providers.template.conf` at `.claude/research-providers.conf`
+
 ### v1.2.0
 - **New `/start-session` skill** — Manual session briefing re-trigger with drift checking. Validates NEXT_SESSION.md against current repo state (task status, new commits, working tree changes). Fills the gap between auto SessionStart hook and PostCompact recovery
 - **`/handoff` improved** — New `## Avoid` section captures failed approaches and dead ends so the next session doesn't repeat mistakes. Conditional (omitted when empty), cut first if over 20-line limit. Updated triggers for pre-compaction use ("before compacting", "preserve context")

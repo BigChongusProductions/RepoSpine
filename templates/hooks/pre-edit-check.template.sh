@@ -1,14 +1,22 @@
 #!/bin/bash
-# Pre-Edit Gate — consolidated check for Edit/Write tool calls (BP-012)
-# Replaces: delegation-reminder (Tier 1) + protect-architecture (Tier 3) — both removed
-# Single process, single JSON parse, single timeout.
+# Pre-Edit Gate — consolidated check for Edit/Write/MultiEdit tool calls.
+# Combines: architecture protection + scope-aware delegation advisory.
+# Single process, single JSON parse.
 #
-# Order: increment delegation counter → architecture check → delegation check
+# Order: architecture check → record scope contribution → advisory emission.
 # Architecture protection takes priority (always "ask" for protected files).
 #
-# State file: .claude/hooks/.delegation_state
-# Format: line 1 = edit count, line 2 = last approval timestamp (epoch)
+# State:
+#   .claude/hooks/.delegation_scope.json    — scope tracker (via lib)
+#   .claude/hooks/.delegation_state         — legacy edit counter + approval ts
+#   .claude/hooks/.active-plan              — plan-mode suppression marker
+#
 # Protected patterns: .claude/hooks/protected-files.conf
+
+# Fire-rate telemetry
+source "$(dirname "${BASH_SOURCE[0]}")/lib-fire-counter.sh"
+# Scope tracker
+source "$(dirname "${BASH_SOURCE[0]}")/lib-scope-counter.sh"
 
 set -euo pipefail
 
@@ -18,25 +26,20 @@ INPUT=$(cat)
 TOOL=$(echo "$INPUT" | jq -r '.tool_name')
 CWD=$(echo "$INPUT" | jq -r '.cwd')
 FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
+OLD_STRING=$(echo "$INPUT" | jq -r '.tool_input.old_string // empty')
+NEW_STRING=$(echo "$INPUT" | jq -r '.tool_input.new_string // empty')
+NEW_CONTENT=$(echo "$INPUT" | jq -r '.tool_input.content // empty')
 
-# ── DELEGATION COUNTER (always runs, even for protected files) ──────────────
+# ── Legacy edit-count state (kept for backward compat with existing hooks) ──
 
 STATE_FILE="$CWD/.claude/hooks/.delegation_state"
-
-# Initialize state file if missing
 if [ ! -f "$STATE_FILE" ]; then
     echo "0" > "$STATE_FILE"
-    date +%s >> "$STATE_FILE"
+    echo "0" >> "$STATE_FILE"
 fi
-
-# Read state
 EDIT_COUNT=$(sed -n '1p' "$STATE_FILE" 2>/dev/null || echo "0")
 LAST_APPROVAL=$(sed -n '2p' "$STATE_FILE" 2>/dev/null || echo "0")
-
-# Increment counter
 EDIT_COUNT=$((EDIT_COUNT + 1))
-
-# Write updated count back
 echo "$EDIT_COUNT" > "$STATE_FILE"
 echo "$LAST_APPROVAL" >> "$STATE_FILE"
 
@@ -46,10 +49,9 @@ if [ -n "$FILE" ]; then
     CONF_FILE="$CWD/.claude/hooks/protected-files.conf"
 
     if [ -f "$CONF_FILE" ]; then
-        # Read patterns from config (skip comments and blank lines)
         PATTERNS=()
         while IFS= read -r line; do
-            line=$(echo "$line" | sed 's/#.*//' | xargs)  # strip comments + whitespace
+            line=$(echo "$line" | sed 's/#.*//' | xargs)
             [ -n "$line" ] && PATTERNS+=("$line")
         done < "$CONF_FILE"
     else
@@ -71,7 +73,6 @@ if [ -n "$FILE" ]; then
         )
     fi
 
-    # Check if the file matches any protected pattern
     BASENAME=$(basename "$FILE")
     for pattern in "${PATTERNS[@]}"; do
         if [[ "$FILE" == *"$pattern"* ]] || [[ "$BASENAME" == *"$pattern"* ]]; then
@@ -87,7 +88,27 @@ if [ -n "$FILE" ]; then
     done
 fi
 
-# ── DELEGATION GATE ─────────────────────────────────────────────────────────
+# ── SCOPE TRACKER + DELEGATION ADVISORY ─────────────────────────────────────
+#
+# Replaces the old stateless {3,10,25,50} edit-count ladder with scope-aware
+# tracking. Advisory fires ONCE per task-boundary when scope crosses any of:
+#   - 3 files AND 50 lines total
+#   - 4 files (regardless of line count)
+#   - 100 lines in a single file
+# Retries (same old_string → new_string) dedupe by sha1; they do not inflate
+# the counters.
+
+export SCOPE_STATE_FILE="$CWD/.claude/hooks/.delegation_scope.json"
+export SCOPE_HISTORY_FILE="$CWD/.claude/hooks/.scope_history.jsonl"
+
+# Record this tool call's contribution to scope.
+if [ -n "$FILE" ]; then
+    if [ "$TOOL" = "Edit" ] || [ "$TOOL" = "MultiEdit" ]; then
+        [ -n "$OLD_STRING" ] && scope_record "$FILE" "$OLD_STRING" "$NEW_STRING" || true
+    elif [ "$TOOL" = "Write" ]; then
+        [ -n "$NEW_CONTENT" ] && scope_record_write "$FILE" "$NEW_CONTENT" || true
+    fi
+fi
 
 NOW=$(date +%s)
 APPROVAL_AGE=$((NOW - LAST_APPROVAL))
@@ -96,26 +117,32 @@ if [ "$APPROVAL_AGE" -lt 1800 ]; then  # 30 minutes
     APPROVAL_FRESH=true
 fi
 
-if [ "$EDIT_COUNT" -ge 3 ] && [ "$APPROVAL_FRESH" = "false" ]; then
-    # Escalate: 3+ file edits without delegation approval
-    jq -n '{
+# Plan-marker suppression (longer-horizon than 30-min approval TTL).
+# Set via mark_plan_active.sh after ExitPlanMode for plans > 30 min.
+PLAN_MARKER="$CWD/.claude/hooks/.active-plan"
+PLAN_ACTIVE=false
+if [ -f "$PLAN_MARKER" ]; then
+    PLAN_TS=$(sed -n '1p' "$PLAN_MARKER" 2>/dev/null || echo "0")
+    PLAN_AGE=$((NOW - PLAN_TS))
+    if [ "$PLAN_AGE" -lt 21600 ]; then  # 6h
+        PLAN_ACTIVE=true
+    fi
+fi
+
+EMIT_ADVISORY=false
+FIRE_REASON=""
+if [ "$APPROVAL_FRESH" = "false" ] && [ "$PLAN_ACTIVE" = "false" ]; then
+    if FIRE_REASON=$(scope_should_fire); then
+        EMIT_ADVISORY=true
+    fi
+fi
+
+if [ "$EMIT_ADVISORY" = "true" ]; then
+    scope_mark_fired
+    jq -n --arg reason "$FIRE_REASON" '{
         hookSpecificOutput: {
             hookEventName: "PreToolUse",
-            permissionDecision: "ask",
-            permissionDecisionReason: "DELEGATION GATE: 3+ file modifications detected without delegation approval. If this is a multi-step task (2+ subtasks or 3+ files), present a delegation table first. Run: bash mark_delegation_approved.sh to clear this gate after approval.\n\n📖 FRAMEWORK REQUIRED: Read delegation.md for the full 6-tier model table and assignment rules:\n  @frameworks/delegation.md"
+            additionalContext: ("DELEGATION GATE (scope crossed: " + $reason + "): this task has grown past single-task scope. If this is a multi-step task with 2+ subtasks, a delegation table must have been presented and approved. If you skipped it, STOP and present the table now.\n\n📖 FRAMEWORK: @frameworks/delegation.md")
         }
     }'
-else
-    # Advisory at milestone edit counts only — reduces token waste vs every-edit emission.
-    # Threshold pattern validated in production across 60+ sessions.
-    case "$EDIT_COUNT" in
-        3|10|25|50)
-            jq -n --arg count "$EDIT_COUNT" '{
-                hookSpecificOutput: {
-                    hookEventName: "PreToolUse",
-                    additionalContext: ("DELEGATION GATE REMINDER (edit #" + $count + "): If this is part of a multi-step task (2+ subtasks or 3+ files), a delegation table must have been presented and approved. ROUTING: For delegation framework: templates/frameworks/delegation.md")
-                }
-            }'
-            ;;
-    esac
 fi

@@ -8,6 +8,13 @@
 #
 # Returns: additionalContext (non-blocking context injection)
 # Never returns permissionDecision — we want Claude to respond, just with the right priority.
+#
+# Side effects on match:
+#   .claude/hooks/.correction_pending  — epoch timestamp (consumed by downstream tooling)
+#   .claude/hooks/.correction_debug    — last 5 matches with matched pattern + text snippet
+
+# Fire-rate telemetry
+source "$(dirname "${BASH_SOURCE[0]}")/lib-fire-counter.sh"
 
 set -euo pipefail
 
@@ -62,6 +69,22 @@ PHRASE_SIGNALS="didn't work|did not work|doesn't work|does not work|that failed|
 WORD_SIGNALS="\bwrong\b|\bbroken\b|\bugh\b|\bseriously\?"
 
 if echo "$USER_TEXT" | grep -qiE "$PHRASE_SIGNALS|$WORD_SIGNALS"; then
+    # Side effects: marker + rotated debug log (helps diagnose false positives).
+    HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    MATCHED=$(echo "$USER_TEXT" | grep -oiE "$PHRASE_SIGNALS|$WORD_SIGNALS" | head -1)
+    printf '%s\n' "$(date +%s)" > "$HOOKS_DIR/.correction_pending"
+
+    DEBUG_FILE="$HOOKS_DIR/.correction_debug"
+    printf '%s | matched="%s" | text="%s"\n' \
+        "$(date -Iseconds 2>/dev/null || date +%Y-%m-%dT%H:%M:%S%z)" \
+        "$MATCHED" \
+        "$(echo "$USER_TEXT" | head -1 | cut -c1-80)" \
+        >> "$DEBUG_FILE"
+    # Rotate: keep last 5 entries
+    if [ -f "$DEBUG_FILE" ]; then
+        tail -5 "$DEBUG_FILE" > "$DEBUG_FILE.tmp" && mv "$DEBUG_FILE.tmp" "$DEBUG_FILE"
+    fi
+
     jq -n '{
         hookSpecificOutput: {
             hookEventName: "UserPromptSubmit",

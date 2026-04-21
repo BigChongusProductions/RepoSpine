@@ -2978,7 +2978,7 @@ phase_flag_tests() {
   # For --phase mode, directory must pre-exist; TEST_B was created by mktemp
   bash "$BOOTSTRAP" "CompareTest" "$TEST_B" \
     --lifecycle quick --non-interactive \
-    --phase database,scripts,frameworks,rules,hooks,agents,settings,init,placeholders,git \
+    --phase database,scripts,frameworks,rules,hooks,agents,skills,settings,init,placeholders,git \
     >/dev/null 2>&1 || true
   local DIFF_OUT
   DIFF_OUT=$(diff \

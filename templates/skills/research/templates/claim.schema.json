@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ResearchClaim",
+  "description": "A generic research claim. Project-specific fields live inside domain_metadata (opaque object).",
+  "type": "object",
+  "required": ["id", "claim", "confidence", "sources"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable identifier. Project decides format (slug, UUID, date-prefix, etc.)."
+    },
+    "claim": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Single-sentence factual claim."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["HIGH", "MEDIUM", "LOW", "DISPUTED"],
+      "description": "Confidence level based on reconciliation across tiers."
+    },
+    "evidence": {
+      "type": "string",
+      "description": "Short supporting text pulled from sources."
+    },
+    "sources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Source" },
+      "minItems": 1
+    },
+    "contradictions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Contradiction" }
+    },
+    "domain_metadata": {
+      "type": "object",
+      "description": "Project-specific fields. Validators MUST NOT enforce shape here; downstream merge scripts validate per-project.",
+      "additionalProperties": true
+    },
+    "note": {
+      "type": ["string", "null"],
+      "description": "Optional researcher note about this claim."
+    }
+  },
+  "$defs": {
+    "Source": {
+      "type": "object",
+      "required": ["title", "retrievedBy"],
+      "properties": {
+        "url": { "type": "string", "description": "URL if available" },
+        "title": { "type": "string", "description": "Source title or description" },
+        "type": {
+          "type": "string",
+          "enum": ["primary", "secondary", "tertiary"],
+          "description": "Source classification"
+        },
+        "retrievedBy": {
+          "type": "string",
+          "enum": ["T1", "T2", "T3", "T4"],
+          "description": "Which retrieval tier found this source"
+        }
+      }
+    },
+    "Contradiction": {
+      "type": "object",
+      "required": ["field", "values", "resolution"],
+      "properties": {
+        "field": { "type": "string", "description": "Field name that's disputed" },
+        "values": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "resolution": { "type": "string", "description": "How the contradiction was resolved" }
+      }
+    }
+  }
+}

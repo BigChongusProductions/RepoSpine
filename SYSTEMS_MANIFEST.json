@@ -1,7 +1,7 @@
 {
   "$schema": "SYSTEMS_MANIFEST",
-  "version": "1.0.0",
-  "generated": "2026-04-09",
+  "version": "1.3.0",
+  "generated": "2026-04-21",
   "description": "Machine-readable inventory of all project-bootstrap components — describes what a generated project receives",
 
   "frameworks": [
@@ -113,10 +113,34 @@
       "description": "Auto-generates protected-files.conf from project STOP rules, infrastructure scripts, and framework files."
     },
     {
+      "name": "lib-fire-counter.template.sh",
+      "path": "templates/hooks/lib-fire-counter.template.sh",
+      "event": "library",
+      "description": "Append-only JSONL telemetry library sourced by hooks to track fire counts per hook name."
+    },
+    {
+      "name": "lib-scope-counter.template.sh",
+      "path": "templates/hooks/lib-scope-counter.template.sh",
+      "event": "library",
+      "description": "Scope tracker library replacing the EDIT_COUNT heuristic — per-file sha1 dedup, thresholded advisory, concurrency-hardened via flock + atomic rename."
+    },
+    {
       "name": "mark_delegation_approved.template.sh",
       "path": "templates/hooks/mark_delegation_approved.template.sh",
       "event": "utility",
       "description": "Resets the delegation edit counter and records a fresh approval timestamp after Master approves a delegation table."
+    },
+    {
+      "name": "mark_plan_active.template.sh",
+      "path": "templates/hooks/mark_plan_active.template.sh",
+      "event": "utility",
+      "description": "Creates .active-plan marker to suppress scope-counter advisory for 6h during deliberate multi-file implementation."
+    },
+    {
+      "name": "mark_plan_done.template.sh",
+      "path": "templates/hooks/mark_plan_done.template.sh",
+      "event": "utility",
+      "description": "Clears .active-plan marker when the plan's deliberate multi-file implementation phase ends."
     },
     {
       "name": "permission-denied-tracker.template.sh",
@@ -131,10 +155,22 @@
       "description": "After context compaction, re-injects critical behavioral rules that may have been summarized away."
     },
     {
+      "name": "post-tool-check.template.sh",
+      "path": "templates/hooks/post-tool-check.template.sh",
+      "event": "PostToolUse",
+      "description": "Consolidated PostToolUse router dispatching to framework-contamination-check, README drift detection, and commit nudge."
+    },
+    {
       "name": "pre-edit-check.template.sh",
       "path": "templates/hooks/pre-edit-check.template.sh",
       "event": "PreToolUse",
       "description": "Consolidated gate for Edit/Write calls combining delegation reminder and architecture file protection."
+    },
+    {
+      "name": "pre-tool-gate.template.sh",
+      "path": "templates/hooks/pre-tool-gate.template.sh",
+      "event": "PreToolUse",
+      "description": "Consolidated PreToolUse router dispatching Edit/Write/MultiEdit to pre-edit-check, Bash to protect-databases, Agent to agent-spawn-gate."
     },
     {
       "name": "protect-databases.template.sh",
@@ -159,6 +195,12 @@
       "path": "templates/hooks/session-start-check.template.sh",
       "event": "SessionStart",
       "description": "At session start, runs the full briefing and injects DB state, NEXT_SESSION.md, and health checks as additionalContext."
+    },
+    {
+      "name": "show-fire-rates.template.sh",
+      "path": "templates/hooks/show-fire-rates.template.sh",
+      "event": "utility",
+      "description": "Analysis tool that reads .fire-counts.jsonl and prints per-hook fire rates plus dead-hook list."
     },
     {
       "name": "static-analysis-gate.template.sh",
@@ -647,6 +689,16 @@
       "description": "Task commands: done, quick, check, and supporting utilities for task lifecycle management."
     },
     {
+      "name": "upgrade_drift.py",
+      "path": "templates/scripts/dbq/commands/upgrade_drift.py",
+      "description": "Drift detection against bootstrap provenance: reads .bootstrap_profile/.bootstrap_created and reports missing template-derived files."
+    },
+    {
+      "name": "upgrade_drift_settings.py",
+      "path": "templates/scripts/dbq/commands/upgrade_drift_settings.py",
+      "description": "Three-way merge (BASE/OURS/THEIRS) for settings.json migration. Modes: --dry-run, --apply (refuses on conflicts), --emit-patch. Plus rollback-settings from .pre-v1.3 backup."
+    },
+    {
       "name": "doctor.py",
       "path": "templates/scripts/dbq/commands/doctor.py",
       "description": "Environment health check: prerequisites, templates, frameworks, platform notes, and host capabilities."
@@ -690,8 +742,15 @@
       "templates/hooks/framework-contamination-check.template.sh",
       "templates/hooks/framework-contamination-patterns.template.conf",
       "templates/hooks/generate-protected-files.template.sh",
+      "templates/hooks/lib-fire-counter.template.sh",
+      "templates/hooks/lib-scope-counter.template.sh",
       "templates/hooks/mark_delegation_approved.template.sh",
+      "templates/hooks/mark_plan_active.template.sh",
+      "templates/hooks/mark_plan_done.template.sh",
       "templates/hooks/permission-denied-tracker.template.sh",
+      "templates/hooks/post-tool-check.template.sh",
+      "templates/hooks/pre-tool-gate.template.sh",
+      "templates/hooks/show-fire-rates.template.sh",
       "templates/hooks/subagent-delegation-check.template.sh"
     ],
     "scripts_core": [
@@ -785,7 +844,7 @@
 
   "summary": {
     "frameworks": 10,
-    "hooks": 19,
+    "hooks": 26,
     "scripts": {
       "root": 9,
       "template": 15,
@@ -796,7 +855,7 @@
     "rules": 12,
     "semgrep_rules": 2,
     "settings": 2,
-    "dbq_commands": 15,
-    "total_systems": 111
+    "dbq_commands": 17,
+    "total_systems": 120
   }
 }

@@ -9,6 +9,9 @@
 # Returns: additionalContext (advisory, non-blocking)
 # We don't block agent spawns — just make the gap visible.
 
+# Fire-rate telemetry
+source "$(dirname "${BASH_SOURCE[0]}")/lib-fire-counter.sh"
+
 set -euo pipefail
 
 INPUT=$(cat)

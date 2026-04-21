@@ -11,6 +11,9 @@
 # Returns: additionalContext (top-level, not hookSpecificOutput — SubagentStop
 #          does not support hookSpecificOutput; output would be silently dropped)
 
+# Fire-rate telemetry
+source "$(dirname "${BASH_SOURCE[0]}")/lib-fire-counter.sh"
+
 set -euo pipefail
 
 INPUT=$(cat)

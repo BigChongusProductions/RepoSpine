@@ -382,6 +382,35 @@ def main(argv: Optional[List[str]] = None):
     p_ud.add_argument("--all", action="store_true", dest="show_all",
                       help="Show all files, not just missing ones")
 
+    # ── Upgrade drift settings ──
+    p_uds = subparsers.add_parser(
+        "upgrade-drift-settings",
+        help="Three-way merge .claude/settings.json for v1.2→v1.3 router migration",
+    )
+    p_uds.add_argument(
+        "--project-dir", dest="project_dir", default="",
+        help="Path to the project (default: CWD)",
+    )
+    p_uds.add_argument(
+        "--bootstrap-root", dest="bootstrap_root", default="",
+        help="Path to the project-bootstrap plugin root (default: plugin install path)",
+    )
+    mode_group = p_uds.add_mutually_exclusive_group()
+    mode_group.add_argument("--apply", action="store_true",
+                            help="Apply the merge (refuses if conflicts exist)")
+    mode_group.add_argument("--emit-patch", action="store_true", dest="emit_patch",
+                            help="Write settings.json.v1.3-proposed without touching settings.json")
+
+    # ── Rollback settings ──
+    p_rs = subparsers.add_parser(
+        "rollback-settings",
+        help="Restore .claude/settings.json from pre-v1.3 backup",
+    )
+    p_rs.add_argument(
+        "--project-dir", dest="project_dir", default="",
+        help="Path to the project (default: CWD)",
+    )
+
     # ── lint ──
     p_lint = subparsers.add_parser("lint", help="Structural lint checks")
     p_lint.add_argument("--fix", action="store_true", help="Auto-fix where possible")
@@ -767,6 +796,14 @@ def _dispatch(args, db, config):
             json_output=args.json_output,
             show_all=args.show_all,
         )
+
+    elif cmd == "upgrade-drift-settings":
+        from .commands.upgrade_drift_settings import cmd_upgrade_drift_settings
+        cmd_upgrade_drift_settings(args)
+
+    elif cmd == "rollback-settings":
+        from .commands.upgrade_drift_settings import cmd_rollback_settings
+        cmd_rollback_settings(args)
 
     # ── Lint ──
     elif cmd == "lint":

@@ -109,6 +109,21 @@ bash db_queries.sh tier-up <TASK-ID> <NEW-TIER> <REASON>
 # REASON: prompt | context | ceiling | environment
 ```
 
+## Context-Aware Shortcut (Token Economics)
+
+Before spawning a sub-agent, check whether direct execution is cheaper:
+
+| Condition | Action |
+|-----------|--------|
+| Orchestrator already has target file in context AND change is <10 lines | **Do it directly** — skip sub-agent |
+| Task requires reading 3+ files orchestrator hasn't seen | Delegate — sub-agent absorbs the context |
+| Task is >50 lines across multiple files | Delegate — work-to-overhead ratio justifies it |
+| Multiple independent tasks can run in parallel | Delegate — wall-clock savings matter |
+
+**Why:** Sub-agents aren't free. Each spawn costs: (1) Opus tokens writing the prompt, (2) sub-agent re-reading files the orchestrator already has, (3) Opus tokens verifying the result. For a 2-line config edit, Haiku delegation costs ~40x more than Opus direct because of re-read overhead.
+
+**Override DB tier when context makes it cheaper:** If `db_queries.sh` says tier=haiku but the orchestrator already has all needed context, execute directly and note "direct — context shortcut" in the done log.
+
 ## Parallelism Rules
 
 Sub-agents can run in parallel **only if** they write to different files.

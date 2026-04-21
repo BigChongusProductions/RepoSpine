@@ -1,0 +1,7 @@
+{
+  "probed_at": "2026-04-21T18:08:59Z",
+  "tavily":  {"available": false, "reason": "disabled in research-providers.conf"},
+  "gemini":  {"available": true, "reason": "GEMINI_API_KEY present"},
+  "ollama":  {"available": false, "reason": "no Ollama at 127.0.0.1:11435 (check OLLAMA_HOST or MCP)"},
+  "grok":    {"available": false, "reason": "GROK_API_KEY/XAI_API_KEY missing"}
+}

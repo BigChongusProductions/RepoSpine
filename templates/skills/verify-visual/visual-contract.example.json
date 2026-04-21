@@ -1,0 +1,47 @@
+{
+  "name": "Example visual contract — copy to visual-contract.json and fill in your selectors",
+  "base_url": "http://localhost:3000",
+  "viewports": {
+    "desktop": { "width": 1400, "height": 900 },
+    "mobile":  { "width": 375,  "height": 812, "device": "Pixel 5" }
+  },
+  "routes": [
+    {
+      "id": "home",
+      "url": "/",
+      "wait_for": "[data-testid=main-loaded]",
+      "viewports": ["desktop", "mobile"]
+    }
+  ],
+  "components": [
+    {
+      "id": "header",
+      "selector": "[data-testid=header]",
+      "route": "home",
+      "viewports": ["desktop", "mobile"]
+    }
+  ],
+  "interactions": [
+    {
+      "id": "search-flow",
+      "route": "home",
+      "viewport": "desktop",
+      "steps": [
+        { "focus": "[data-testid=search-input]" },
+        { "type":  "hello" },
+        { "expect": "[data-testid=search-suggestions]" }
+      ]
+    }
+  ],
+  "pixel_diff_threshold": 0.02,
+  "performance_budgets": {
+    "lcp_ms": 4000,
+    "cls": 0.1
+  },
+  "vision_check": {
+    "provider": "none",
+    "blocking": false,
+    "budget_per_run": 3,
+    "prompts": []
+  }
+}
